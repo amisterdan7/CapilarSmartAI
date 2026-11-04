@@ -71,10 +71,10 @@ export const StepCadastro: React.FC<StepCadastroProps> = ({
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="bg-[#0c101d] rounded-2xl border border-[#1e273d] p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/30 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(247,37,133,0.15)]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/20 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2">
               <User className="w-3.5 h-3.5" /> Etapa 2 • {isEditing ? 'Edição de Cadastro' : 'Novo Cadastro da Cliente'}
             </div>
             <h2 className="text-2xl font-bold text-white tracking-tight">
@@ -91,7 +91,7 @@ export const StepCadastro: React.FC<StepCadastroProps> = ({
             <button
               type="button"
               onClick={() => onViewHistory(currentClient)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#141b2e] hover:bg-[#1b2540] border border-[#202c48] text-slate-200 text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#111728] hover:bg-[#182138] border border-[#1d273f] text-slate-200 text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto min-h-[40px]"
             >
               <History className="w-4 h-4 text-cyan-400" />
               <span>Ver Histórico Desta Cliente</span>
@@ -102,7 +102,7 @@ export const StepCadastro: React.FC<StepCadastroProps> = ({
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-[#0c101d] rounded-2xl border border-[#1a2236] p-6 space-y-5">
+        <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] p-5 sm:p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Nome Completo */}
             <div className="space-y-1.5">

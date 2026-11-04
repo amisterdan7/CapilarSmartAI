@@ -1,6 +1,18 @@
 import React from 'react';
-import { Sparkles, UserCheck, Plus, Clock, BookOpen, Package, Settings, Home } from 'lucide-react';
-import { ClientData, FlowStep } from '../types';
+import {
+  Sparkles,
+  UserCheck,
+  Plus,
+  Clock,
+  BookOpen,
+  Package,
+  Settings,
+  Home,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+} from 'lucide-react';
+import { ClientData, FlowStep, ProfessionalProfile } from '../types';
 
 interface HeaderProps {
   currentClient: ClientData | null;
@@ -13,6 +25,10 @@ interface HeaderProps {
   onOpenSettings: () => void;
   salonName?: string;
   enableSenacBadge?: boolean;
+  currentUser?: { email?: string | null; uid: string } | null;
+  profile?: ProfessionalProfile | null;
+  onOpenAuthModal?: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,54 +42,59 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   salonName = 'Espaço Capilar & Beleza',
   enableSenacBadge = true,
+  currentUser = null,
+  profile = null,
+  onOpenAuthModal,
+  onLogout,
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-[#05070e]/95 backdrop-blur-md border-b border-[#1c2438] px-3 sm:px-6 py-2.5 sm:py-3 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
-        {/* Top Row: Logo & Brand Identity */}
+    <header className="sticky top-0 z-40 bg-[#05070e]/95 backdrop-blur-md border-b border-[#141b2a] px-3 sm:px-6 py-2 sm:py-2.5 transition-all">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 md:gap-4">
+        {/* Brand Zone */}
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onGoHome}
-            className="flex items-center gap-2.5 sm:gap-3.5 text-left group cursor-pointer"
+            className="flex items-center gap-2.5 sm:gap-3 text-left group cursor-pointer"
             title="Ir para a Tela Inicial"
           >
-            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-[#ff007f] via-[#f72585] to-[#7209b7] p-[1.5px] shadow-[0_0_15px_rgba(247,37,133,0.35)] flex items-center justify-center flex-shrink-0 group-hover:shadow-[0_0_22px_rgba(247,37,133,0.6)] transition-all">
+            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-[#ff007f] via-[#f72585] to-[#7209b7] p-[1.5px] shadow-[0_0_15px_rgba(247,37,133,0.3)] flex items-center justify-center flex-shrink-0 group-hover:shadow-[0_0_22px_rgba(247,37,133,0.55)] transition-all">
               <div className="h-full w-full bg-[#080c18] rounded-[10px] flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-[#f72585]" />
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <h1 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
                   CAPILAR SMART{' '}
-                  <span className="text-white text-[10px] sm:text-xs font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-[#e01e84] to-[#f72585] shadow-[0_0_10px_rgba(247,37,133,0.5)] tracking-wider">
+                  <span className="text-white text-[10px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-[#e01e84] to-[#f72585] shadow-[0_0_10px_rgba(247,37,133,0.4)] tracking-wider">
                     IA
                   </span>
                 </h1>
                 {enableSenacBadge && (
-                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full bg-[#111728] text-slate-300 border border-[#222f4d]">
+                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] px-2 py-0.5 rounded-md bg-[#0c1120] text-slate-300 border border-[#1a233a]">
                     <BookOpen className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#f72585]" /> SENAC • Projeto Integrador
                   </span>
                 )}
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block truncate max-w-xl">
-                "Tecnologia que entende o seu cabelo!" • TECNOLOGIA + CIÊNCIA + BELEZA
+              <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-xl">
+                Tecnologia que entende o seu cabelo • Ciência, Tecnologia e Beleza
               </p>
             </div>
           </button>
         </div>
 
-        {/* Action Controls: Touch-friendly on mobile & tablet */}
-        <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto pt-1.5 sm:pt-0 border-t sm:border-t-0 border-[#141b2e] overflow-x-auto no-scrollbar">
+        {/* Action Controls Toolbar (Optimized for Mobile swipe & Tablet touch bench) */}
+        <div className="flex items-center justify-between md:justify-end gap-1.5 sm:gap-2 w-full md:w-auto pt-1 md:pt-0 border-t md:border-t-0 border-[#141b2a] overflow-x-auto no-scrollbar">
           {/* Home Button */}
           <button
             id="header-btn-home"
+            type="button"
             onClick={onGoHome}
-            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs transition-colors cursor-pointer min-h-[38px] flex-shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95 ${
               currentStep === 'INICIO'
-                ? 'bg-[#151b2e] text-[#f72585] border-[#f72585]/50 shadow-[0_0_10px_rgba(247,37,133,0.2)]'
-                : 'bg-[#0b0f1d] hover:bg-[#13192c] border-[#1d2740] text-slate-300'
+                ? 'bg-[#151c2e] text-[#f72585] border-[#f72585]/50 shadow-[0_0_10px_rgba(247,37,133,0.25)] font-semibold'
+                : 'bg-[#0a0e1c] hover:bg-[#111728] border-[#182136] text-slate-300 hover:text-white'
             }`}
             title="Tela Inicial com apresentação da marca"
           >
@@ -85,15 +106,16 @@ export const Header: React.FC<HeaderProps> = ({
           {currentClient ? (
             <button
               id="header-client-badge"
+              type="button"
               onClick={onSelectClient}
-              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0b0f1d] hover:bg-[#13192c] border border-[#1d2740] hover:border-[#f72585]/50 text-xs transition-colors cursor-pointer min-h-[38px] flex-shrink-0"
+              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0a0e1c] hover:bg-[#111728] border border-[#182136] hover:border-[#f72585]/40 text-xs transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95"
               title="Trocar ou editar cliente selecionado"
             >
               <div className="w-6 h-6 rounded-full bg-[#f72585]/20 text-[#f72585] flex items-center justify-center font-bold text-[11px] flex-shrink-0">
                 {currentClient.name.charAt(0) || 'C'}
               </div>
               <div className="text-left min-w-0">
-                <p className="text-slate-200 font-medium truncate max-w-[80px] sm:max-w-[120px] md:max-w-[140px] leading-tight text-[11px] sm:text-xs">
+                <p className="text-slate-200 font-medium truncate max-w-[80px] sm:max-w-[120px] md:max-w-[130px] leading-tight text-[11px] sm:text-xs">
                   {currentClient.name || 'Nova Cliente'}
                 </p>
                 <p className="text-[9px] text-[#f72585] flex items-center gap-0.5">
@@ -104,8 +126,9 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               id="header-client-badge"
+              type="button"
               onClick={onSelectClient}
-              className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0b0f1d] hover:bg-[#13192c] border border-dashed border-[#293757] text-xs text-slate-300 transition-colors cursor-pointer min-h-[38px] flex-shrink-0"
+              className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0a0e1c] hover:bg-[#111728] border border-dashed border-[#232e48] text-xs text-slate-300 hover:text-white hover:border-[#f72585]/40 transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95"
             >
               <UserCheck className="w-3.5 h-3.5 text-slate-400" />
               <span className="text-[11px] sm:text-xs">Clientes</span>
@@ -115,8 +138,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Produtos Button */}
           <button
             id="header-btn-products"
+            type="button"
             onClick={onOpenProducts}
-            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0b0f1d] hover:bg-[#13192c] border border-[#1d2740] hover:border-[#f72585]/50 text-xs text-slate-200 transition-colors cursor-pointer min-h-[38px] flex-shrink-0"
+            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0a0e1c] hover:bg-[#111728] border border-[#182136] hover:border-[#f72585]/40 text-xs text-slate-300 hover:text-white transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95"
             title="Cadastro e Gestão de Produtos do Salão e Home Care"
           >
             <Package className="w-3.5 h-3.5 text-[#f72585]" />
@@ -126,8 +150,9 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Settings Button */}
           <button
             id="header-btn-settings"
+            type="button"
             onClick={onOpenSettings}
-            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0b0f1d] hover:bg-[#13192c] border border-[#1d2740] hover:border-[#f72585]/50 text-xs text-slate-200 transition-colors cursor-pointer min-h-[38px] flex-shrink-0"
+            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0a0e1c] hover:bg-[#111728] border border-[#182136] hover:border-[#f72585]/40 text-xs text-slate-300 hover:text-white transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95"
             title="Configurações do Salão & Diretrizes"
           >
             <Settings className="w-3.5 h-3.5 text-[#f72585]" />
@@ -137,24 +162,73 @@ export const Header: React.FC<HeaderProps> = ({
           {/* History Button */}
           <button
             id="header-btn-history"
+            type="button"
             onClick={onOpenHistory}
-            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0b0f1d] hover:bg-[#13192c] border border-[#1d2740] hover:border-[#f72585]/50 text-xs text-slate-200 transition-colors cursor-pointer min-h-[38px] flex-shrink-0"
+            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0a0e1c] hover:bg-[#111728] border border-[#182136] hover:border-[#f72585]/40 text-xs text-slate-300 hover:text-white transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95"
             title="Ver histórico de prontuários salvos"
           >
             <Clock className="w-3.5 h-3.5 text-[#f72585]" />
             <span className="text-[11px] sm:text-xs">Histórico</span>
           </button>
 
-          {/* New Evaluation Button */}
+          {/* New Evaluation Button (Primary CTA) */}
           <button
             id="header-btn-new-eval"
+            type="button"
             onClick={onNewEvaluation}
-            className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#e01e84] to-[#f72585] text-white font-bold text-xs shadow-[0_0_18px_rgba(247,37,133,0.35)] hover:shadow-[0_0_25px_rgba(247,37,133,0.55)] hover:brightness-110 active:scale-95 transition-all cursor-pointer min-h-[38px] flex-shrink-0 whitespace-nowrap border border-[#ff66b2]/40"
+            className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#e01e84] to-[#f72585] text-white font-bold text-xs shadow-[0_0_16px_rgba(247,37,133,0.35)] hover:shadow-[0_0_24px_rgba(247,37,133,0.55)] hover:brightness-105 active:scale-95 transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 whitespace-nowrap border border-[#ff66b2]/40"
             title="Iniciar uma nova avaliação na bancada"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             <span className="text-[11px] sm:text-xs">Nova Avaliação</span>
           </button>
+
+          {/* Professional Auth & Profile */}
+          {currentUser ? (
+            <div className="flex items-center gap-1.5 pl-1 border-l border-[#182136] flex-shrink-0">
+              <div
+                className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#0a0e1c] border border-[#182136] text-xs h-[38px] sm:h-[40px] flex-shrink-0"
+                title={`Profissional conectada: ${profile?.name || currentUser.email}`}
+              >
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#7209b7] to-[#f72585] text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 shadow-[0_0_8px_rgba(247,37,133,0.3)]">
+                  {(profile?.name || currentUser.email || 'P').charAt(0).toUpperCase()}
+                </div>
+                <div className="text-left min-w-0 hidden md:block">
+                  <p className="text-slate-200 font-medium truncate max-w-[110px] leading-tight text-[11px]">
+                    {profile?.name || currentUser.email?.split('@')[0]}
+                  </p>
+                  <p className="text-[9px] text-emerald-400 flex items-center gap-0.5">
+                    <ShieldCheck className="w-2.5 h-2.5 flex-shrink-0" />
+                    <span className="truncate">{profile?.clinicName || 'Bancada Ativa'}</span>
+                  </p>
+                </div>
+              </div>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-2 rounded-xl bg-[#0a0e1c] hover:bg-[#20101d] text-slate-400 hover:text-rose-400 border border-[#182136] hover:border-rose-500/40 transition-colors cursor-pointer h-[38px] sm:h-[40px] flex items-center justify-center flex-shrink-0 active:scale-95"
+                  title="Encerrar sessão da profissional"
+                  aria-label="Sair da conta"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            onOpenAuthModal && (
+              <button
+                id="header-btn-auth"
+                type="button"
+                onClick={onOpenAuthModal}
+                className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0a0e1c] hover:bg-[#111728] border border-[#232e48] hover:border-[#f72585]/50 text-xs text-slate-200 transition-all cursor-pointer h-[38px] sm:h-[40px] flex-shrink-0 active:scale-95"
+                title="Acessar sua conta profissional individual"
+              >
+                <LogIn className="w-3.5 h-3.5 text-[#f72585]" />
+                <span className="text-[11px] sm:text-xs">Entrar</span>
+              </button>
+            )
+          )}
         </div>
       </div>
     </header>

@@ -73,6 +73,8 @@ export const ModalCompararEvolucao: React.FC<ModalCompararEvolucaoProps> = ({
 
   const [recordAId, setRecordAId] = useState<string>(defaultA?.id || '');
   const [recordBId, setRecordBId] = useState<string>(defaultB?.id || '');
+  const [sliderPosition, setSliderPosition] = useState<number>(50);
+  const [comparisonMode, setComparisonMode] = useState<'slider' | 'side-by-side'>('slider');
 
   useEffect(() => {
     if (defaultA?.id) setRecordAId(defaultA.id);
@@ -114,16 +116,16 @@ export const ModalCompararEvolucao: React.FC<ModalCompararEvolucaoProps> = ({
   const healthDiff = report.overallHealthDiff?.difference ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
-      <div className="bg-[#0c101d] rounded-2xl border border-[#1e273d] w-full max-w-5xl max-h-[92vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] w-full max-w-5xl max-h-[92vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden my-auto">
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-[#1b2338] flex items-center justify-between bg-gradient-to-r from-[#141b2e] via-[#0c101d] to-[#0c101d] flex-shrink-0">
+        <div className="p-4 sm:p-6 border-b border-[#162035] flex items-center justify-between bg-[#0a0f1d] flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/30 flex items-center justify-center text-[#f72585] shadow-[0_0_12px_rgba(247,37,133,0.25)] flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/20 flex items-center justify-center text-[#f72585] flex-shrink-0">
               <ArrowLeftRight className="w-5 h-5" />
             </div>
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f72585]/10 text-[#f72585] text-[10px] font-bold tracking-wider uppercase mb-1 border border-[#f72585]/30">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f72585]/10 text-[#f72585] text-[10px] font-bold tracking-wider uppercase mb-1 border border-[#f72585]/20">
                 <Sparkles className="w-3 h-3" /> Histórico & Evolução Capilar • Prontuário Independente
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
@@ -411,62 +413,145 @@ export const ModalCompararEvolucao: React.FC<ModalCompararEvolucaoProps> = ({
                 </div>
               </div>
 
-              {/* Microscopy Comparison (if available in either evaluation) */}
+              {/* Comparativo Visual Clínico: Slider Interativo ou Lado a Lado */}
               {(recordA?.visual.microscope?.deviceImage || recordB?.visual.microscope?.deviceImage) && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <Microscope className="w-3.5 h-3.5 text-cyan-400" /> Comparativo Visual do Microscópio Digital
-                  </h4>
+                <div className="space-y-3 p-4 rounded-2xl bg-[#060913] border border-[#1a2338]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#141c30] pb-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                      <Microscope className="w-3.5 h-3.5 text-cyan-400" /> Comparativo Visual do Microscópio Digital
+                    </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Previous image */}
-                    <div className="p-3 rounded-xl bg-[#060913] border border-[#1a2338] space-y-2">
-                      <span className="text-[11px] font-bold text-slate-400 block">
-                        Microscopia Anterior ({new Date(recordA.date).toLocaleDateString('pt-BR')}):
-                      </span>
-                      {recordA.visual.microscope?.deviceImage ? (
-                        <img
-                          src={recordA.visual.microscope.deviceImage}
-                          alt="Microscopia Anterior"
-                          className="w-full h-40 object-cover rounded-lg border border-[#1e273d]"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="w-full h-40 rounded-lg bg-[#0a0f1d] border border-dashed border-[#1e273d] flex items-center justify-center text-slate-500 text-xs">
-                          Sem foto na avaliação anterior
-                        </div>
-                      )}
-                      {recordA.visual.microscope?.deviceNotes && (
-                        <p className="text-[10px] text-slate-400 italic">
-                          "{recordA.visual.microscope.deviceNotes}"
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Current image */}
-                    <div className="p-3 rounded-xl bg-[#060913] border border-[#1a2338] space-y-2">
-                      <span className="text-[11px] font-bold text-[#f72585] block">
-                        Microscopia Atual ({new Date(recordB.date).toLocaleDateString('pt-BR')}):
-                      </span>
-                      {recordB.visual.microscope?.deviceImage ? (
-                        <img
-                          src={recordB.visual.microscope.deviceImage}
-                          alt="Microscopia Atual"
-                          className="w-full h-40 object-cover rounded-lg border border-[#f72585]/40"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="w-full h-40 rounded-lg bg-[#0a0f1d] border border-dashed border-[#1e273d] flex items-center justify-center text-slate-500 text-xs">
-                          Sem foto na avaliação atual
-                        </div>
-                      )}
-                      {recordB.visual.microscope?.deviceNotes && (
-                        <p className="text-[10px] text-slate-400 italic">
-                          "{recordB.visual.microscope.deviceNotes}"
-                        </p>
-                      )}
+                    {/* Alternância de Modo de Visualização */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setComparisonMode('slider')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                          comparisonMode === 'slider'
+                            ? 'bg-[#18223c] border-[#f72585] text-white'
+                            : 'bg-[#080d1a] border-[#1a2338] text-slate-400'
+                        }`}
+                      >
+                        Slider Cortina Interativo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setComparisonMode('side-by-side')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
+                          comparisonMode === 'side-by-side'
+                            ? 'bg-[#18223c] border-[#f72585] text-white'
+                            : 'bg-[#080d1a] border-[#1a2338] text-slate-400'
+                        }`}
+                      >
+                        Lado a Lado
+                      </button>
                     </div>
                   </div>
+
+                  {comparisonMode === 'slider' && recordA?.visual.microscope?.deviceImage && recordB?.visual.microscope?.deviceImage ? (
+                    <div className="space-y-2">
+                      <div className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden bg-black border border-[#1e273d] select-none">
+                        {/* Imagem Depois (Fundo Completo) */}
+                        <img
+                          src={recordB.visual.microscope.deviceImage}
+                          alt="Depois (Atual)"
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 text-[#f72585] border border-[#f72585]/30 text-[10px] font-bold z-10">
+                          Depois ({new Date(recordB.date).toLocaleDateString('pt-BR')})
+                        </span>
+
+                        {/* Imagem Antes (Sobreposta com Clip-Path do Slider) */}
+                        <div
+                          className="absolute inset-0 overflow-hidden"
+                          style={{ width: `${sliderPosition}%` }}
+                        >
+                          <img
+                            src={recordA.visual.microscope.deviceImage}
+                            alt="Antes (Anterior)"
+                            className="absolute inset-0 w-full h-full object-cover max-w-none"
+                            style={{ width: '100%', height: '100%' }}
+                          />
+                          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 text-cyan-400 border border-cyan-800/40 text-[10px] font-bold z-10">
+                            Antes ({new Date(recordA.date).toLocaleDateString('pt-BR')})
+                          </span>
+                        </div>
+
+                        {/* Linha Divisora Vertical */}
+                        <div
+                          className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20 pointer-events-none"
+                          style={{ left: `${sliderPosition}%` }}
+                        >
+                          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white text-black text-[9px] font-bold flex items-center justify-center shadow-lg">
+                            ⇄
+                          </div>
+                        </div>
+
+                        {/* Input Range Invisível para Controle do Slider */}
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={sliderPosition}
+                          onChange={(e) => setSliderPosition(Number(e.target.value))}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30"
+                        />
+                      </div>
+                      <p className="text-[10px] text-center text-slate-400">
+                        Arraste horizontalmente para inspecionar o fechamento de cutículas e densidade capilar no mesmo ponto anatômico.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Previous image */}
+                      <div className="p-3 rounded-xl bg-[#0b101d] border border-[#1a2338] space-y-2">
+                        <span className="text-[11px] font-bold text-cyan-400 block">
+                          Microscopia Anterior ({new Date(recordA.date).toLocaleDateString('pt-BR')}):
+                        </span>
+                        {recordA.visual.microscope?.deviceImage ? (
+                          <img
+                            src={recordA.visual.microscope.deviceImage}
+                            alt="Microscopia Anterior"
+                            className="w-full h-44 object-cover rounded-lg border border-[#1e273d]"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-full h-44 rounded-lg bg-[#0a0f1d] border border-dashed border-[#1e273d] flex items-center justify-center text-slate-500 text-xs">
+                            Sem foto na avaliação anterior
+                          </div>
+                        )}
+                        {recordA.visual.microscope?.deviceNotes && (
+                          <p className="text-[10px] text-slate-400 italic">
+                            "{recordA.visual.microscope.deviceNotes}"
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Current image */}
+                      <div className="p-3 rounded-xl bg-[#0b101d] border border-[#1a2338] space-y-2">
+                        <span className="text-[11px] font-bold text-[#f72585] block">
+                          Microscopia Atual ({new Date(recordB.date).toLocaleDateString('pt-BR')}):
+                        </span>
+                        {recordB.visual.microscope?.deviceImage ? (
+                          <img
+                            src={recordB.visual.microscope.deviceImage}
+                            alt="Microscopia Atual"
+                            className="w-full h-44 object-cover rounded-lg border border-[#f72585]/40"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-full h-44 rounded-lg bg-[#0a0f1d] border border-dashed border-[#1e273d] flex items-center justify-center text-slate-500 text-xs">
+                            Sem foto na avaliação atual
+                          </div>
+                        )}
+                        {recordB.visual.microscope?.deviceNotes && (
+                          <p className="text-[10px] text-slate-400 italic">
+                            "{recordB.visual.microscope.deviceNotes}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

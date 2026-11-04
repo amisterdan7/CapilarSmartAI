@@ -1,0 +1,488 @@
+/**
+ * Serviço de Persistência no Cloud Firestore com Isolamento por UID
+ * Capilar Smart IA — Fase 3
+ * 
+ * Regras estritas:
+ * 1. Todas as operações utilizam estritamente o UID da sessão ativa como professionalId.
+ * 2. Whitelist de campos estrita em cada escrita, idêntica ao firestore.rules e firebase-blueprint.json.
+ * 3. Sanitização de valores nulos/indefinidos para evitar erros de validação CEL.
+ * 4. Isolamento multi-tenant garantido: nenhuma consulta sem filtro de professionalId.
+ * 5. Importação local explícita e controlada (sem upload automático).
+ */
+
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  where,
+  type Firestore,
+} from 'firebase/firestore';
+import { db, requireDb, isFirebaseConfigured, handleFirestoreError } from './firebase';
+import {
+  ClientData,
+  FullEvaluationRecord,
+  SalonProduct,
+  SalonSettings,
+} from '../types';
+
+// ==========================================
+// FUNÇÕES AUXILIARES DE SANITIZAÇÃO
+// ==========================================
+
+const sanitizeClientForFirestore = (client: ClientData, professionalId: string) => {
+  const payload: Record<string, unknown> = {
+    id: client.id,
+    professionalId,
+    name: client.name ? client.name.trim().slice(0, 150) : 'Cliente sem nome',
+    createdAt: client.createdAt || new Date().toISOString(),
+  };
+
+  if (client.phone && client.phone.trim()) payload.phone = client.phone.trim().slice(0, 30);
+  if (client.email && client.email.trim()) payload.email = client.email.trim().slice(0, 150);
+  if (client.age !== undefined && client.age !== '') payload.age = client.age;
+  if (client.hairGoal && client.hairGoal.trim()) payload.hairGoal = client.hairGoal.trim().slice(0, 500);
+  if (client.mainComplaint && client.mainComplaint.trim()) payload.mainComplaint = client.mainComplaint.trim().slice(0, 1000);
+  if (client.notes && client.notes.trim()) payload.notes = client.notes.trim().slice(0, 3000);
+  if (typeof client.archived === 'boolean') payload.archived = client.archived;
+  if (client.archivedAt) payload.archivedAt = client.archivedAt;
+  payload.updatedAt = new Date().toISOString();
+
+  return payload;
+};
+
+const sanitizeEvaluationForFirestore = (evaluation: FullEvaluationRecord, professionalId: string) => {
+  const payload: Record<string, unknown> = {
+    id: evaluation.id,
+    professionalId,
+    clientId: evaluation.clientId,
+    createdAt: evaluation.createdAt || new Date().toISOString(),
+  };
+
+  if (evaluation.clientName) payload.clientName = evaluation.clientName.slice(0, 150);
+  if (evaluation.date) payload.date = evaluation.date;
+  if (evaluation.previousEvaluationId) payload.previousEvaluationId = evaluation.previousEvaluationId.slice(0, 100);
+  if (evaluation.evaluationMode) payload.evaluationMode = evaluation.evaluationMode.slice(0, 50);
+  if (typeof evaluation.isDemoData === 'boolean') payload.isDemoData = evaluation.isDemoData;
+  if (evaluation.status) payload.status = evaluation.status.slice(0, 50);
+
+  if (evaluation.anamnese && typeof evaluation.anamnese === 'object') payload.anamnese = evaluation.anamnese;
+  if (evaluation.visual && typeof evaluation.visual === 'object') payload.visual = evaluation.visual;
+  if (evaluation.scores && typeof evaluation.scores === 'object') payload.scores = evaluation.scores;
+  if (evaluation.calculation && typeof evaluation.calculation === 'object') payload.calculation = evaluation.calculation;
+  if (evaluation.salonProtocol && typeof evaluation.salonProtocol === 'object') payload.salonProtocol = evaluation.salonProtocol;
+  if (evaluation.homeCare && typeof evaluation.homeCare === 'object') payload.homeCare = evaluation.homeCare;
+  if (evaluation.treatmentSchedule && typeof evaluation.treatmentSchedule === 'object') payload.treatmentSchedule = evaluation.treatmentSchedule;
+  if (evaluation.aiInsights && typeof evaluation.aiInsights === 'object') payload.aiInsights = evaluation.aiInsights;
+  if (Array.isArray(evaluation.images)) payload.images = evaluation.images;
+
+  if (evaluation.professionalNotes) payload.professionalNotes = evaluation.professionalNotes.slice(0, 5000);
+  if (evaluation.evolutionNotes) payload.evolutionNotes = evaluation.evolutionNotes.slice(0, 5000);
+  if (evaluation.nextEvaluationGoal) payload.nextEvaluationGoal = evaluation.nextEvaluationGoal.slice(0, 500);
+
+  payload.updatedAt = new Date().toISOString();
+  return payload;
+};
+
+const sanitizeProductForFirestore = (product: SalonProduct, professionalId: string) => {
+  const payload: Record<string, unknown> = {
+    id: product.id,
+    professionalId,
+    name: product.name ? product.name.trim().slice(0, 200) : 'Produto sem nome',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (product.brand) payload.brand = product.brand.slice(0, 100);
+  if (product.line) payload.line = product.line.slice(0, 100);
+  if (product.category) payload.category = product.category.slice(0, 50);
+  if (product.macroCategory) payload.macroCategory = product.macroCategory.slice(0, 50);
+  if (product.productType) payload.productType = product.productType.slice(0, 100);
+  if (product.purpose) payload.purpose = product.purpose.slice(0, 500);
+  if (product.targetUse) payload.targetUse = product.targetUse.slice(0, 50);
+  if (product.keyActives) payload.keyActives = product.keyActives.slice(0, 500);
+  if (Array.isArray(product.keyIngredients)) payload.keyIngredients = product.keyIngredients;
+  if (Array.isArray(product.activeIngredients)) payload.activeIngredients = product.activeIngredients;
+  if (Array.isArray(product.cosmeticBenefits)) payload.cosmeticBenefits = product.cosmeticBenefits;
+  if (product.indications) payload.indications = product.indications.slice(0, 1000);
+  if (product.cautions) payload.cautions = product.cautions.slice(0, 1000);
+  if (product.contraindications) payload.contraindications = product.contraindications.slice(0, 1000);
+  if (product.usageInstructions) payload.usageInstructions = product.usageInstructions.slice(0, 1000);
+  if (typeof product.pauseTimeMinutes === 'number') payload.pauseTimeMinutes = product.pauseTimeMinutes;
+  if (product.suggestedFrequency) payload.suggestedFrequency = product.suggestedFrequency.slice(0, 200);
+  if (product.professionalNotes) payload.professionalNotes = product.professionalNotes.slice(0, 3000);
+  if (typeof product.active === 'boolean') payload.active = product.active;
+  if (typeof product.inStock === 'boolean') payload.inStock = product.inStock;
+  if (typeof product.stockQuantity === 'number') payload.stockQuantity = product.stockQuantity;
+  if (product.pH) payload.pH = product.pH.slice(0, 30);
+  if (product.description) payload.description = product.description.slice(0, 3000);
+  if (product.price) payload.price = product.price.slice(0, 50);
+  if (Array.isArray(product.indicatedCurvatures)) payload.indicatedCurvatures = product.indicatedCurvatures;
+  if (Array.isArray(product.tags)) payload.tags = product.tags;
+  if (product.cosmeticFunction) payload.cosmeticFunction = product.cosmeticFunction.slice(0, 50);
+
+  payload.updatedAt = new Date().toISOString();
+  return payload;
+};
+
+const sanitizeSettingsForFirestore = (settings: SalonSettings, professionalId: string) => {
+  const payload: Record<string, unknown> = {
+    professionalId,
+  };
+
+  if (settings.salonName) payload.salonName = settings.salonName.slice(0, 100);
+  if (settings.professionalName) payload.professionalName = settings.professionalName.slice(0, 100);
+  if (settings.phone) payload.phone = settings.phone.slice(0, 30);
+  if (settings.instagram) payload.instagram = settings.instagram.slice(0, 50);
+  if (typeof settings.enableSenacBadge === 'boolean') payload.enableSenacBadge = settings.enableSenacBadge;
+  if (typeof settings.defaultPauseTime === 'number') payload.defaultPauseTime = Math.min(180, Math.max(0, settings.defaultPauseTime));
+  if (settings.customNotes) payload.customNotes = settings.customNotes.slice(0, 2000);
+
+  payload.updatedAt = new Date().toISOString();
+  return payload;
+};
+
+// ==========================================
+// OPERAÇÕES: CLIENTES
+// ==========================================
+
+export const fetchClientsFromFirestore = async (professionalId: string): Promise<ClientData[]> => {
+  if (!isFirebaseConfigured() || !db) return [];
+  if (!professionalId) throw new Error('fetchClientsFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const q = query(
+      collection(db, 'clients'),
+      where('professionalId', '==', professionalId)
+    );
+    const snap = await getDocs(q);
+    const clients: ClientData[] = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      clients.push({
+        id: data.id || docSnap.id,
+        name: data.name || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        age: data.age !== undefined ? data.age : '',
+        hairGoal: data.hairGoal || '',
+        mainComplaint: data.mainComplaint || '',
+        notes: data.notes || '',
+        archived: Boolean(data.archived),
+        archivedAt: data.archivedAt || undefined,
+        createdAt: data.createdAt || new Date().toISOString(),
+      });
+    });
+    return clients;
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'list',
+      collection: 'clients',
+    });
+  }
+};
+
+export const saveClientToFirestore = async (
+  client: ClientData,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('saveClientToFirestore: professionalId é obrigatório.');
+
+  const payload = sanitizeClientForFirestore(client, professionalId);
+  try {
+    const ref = doc(dbInstance, 'clients', client.id);
+    await setDoc(ref, payload, { merge: true });
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'create',
+      collection: 'clients',
+      documentId: client.id,
+    });
+  }
+};
+
+export const deleteClientFromFirestore = async (
+  clientId: string,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('deleteClientFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const ref = doc(dbInstance, 'clients', clientId);
+    await deleteDoc(ref);
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'delete',
+      collection: 'clients',
+      documentId: clientId,
+    });
+  }
+};
+
+// ==========================================
+// OPERAÇÕES: AVALIAÇÕES
+// ==========================================
+
+export const fetchEvaluationsFromFirestore = async (
+  professionalId: string
+): Promise<FullEvaluationRecord[]> => {
+  if (!isFirebaseConfigured() || !db) return [];
+  if (!professionalId) throw new Error('fetchEvaluationsFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const q = query(
+      collection(db, 'evaluations'),
+      where('professionalId', '==', professionalId)
+    );
+    const snap = await getDocs(q);
+    const evals: FullEvaluationRecord[] = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data() as FullEvaluationRecord;
+      evals.push({
+        ...data,
+        id: data.id || docSnap.id,
+      });
+    });
+    return evals;
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'list',
+      collection: 'evaluations',
+    });
+  }
+};
+
+export const saveEvaluationToFirestore = async (
+  evaluation: FullEvaluationRecord,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('saveEvaluationToFirestore: professionalId é obrigatório.');
+
+  const payload = sanitizeEvaluationForFirestore(evaluation, professionalId);
+  try {
+    const ref = doc(dbInstance, 'evaluations', evaluation.id);
+    await setDoc(ref, payload, { merge: true });
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'create',
+      collection: 'evaluations',
+      documentId: evaluation.id,
+    });
+  }
+};
+
+export const deleteEvaluationFromFirestore = async (
+  evaluationId: string,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('deleteEvaluationFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const ref = doc(dbInstance, 'evaluations', evaluationId);
+    await deleteDoc(ref);
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'delete',
+      collection: 'evaluations',
+      documentId: evaluationId,
+    });
+  }
+};
+
+// ==========================================
+// OPERAÇÕES: PRODUTOS
+// ==========================================
+
+export const fetchProductsFromFirestore = async (
+  professionalId: string
+): Promise<SalonProduct[]> => {
+  if (!isFirebaseConfigured() || !db) return [];
+  if (!professionalId) throw new Error('fetchProductsFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const q = query(
+      collection(db, 'products'),
+      where('professionalId', '==', professionalId)
+    );
+    const snap = await getDocs(q);
+    const products: SalonProduct[] = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data() as SalonProduct;
+      products.push({
+        ...data,
+        id: data.id || docSnap.id,
+      });
+    });
+    return products;
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'list',
+      collection: 'products',
+    });
+  }
+};
+
+export const saveProductToFirestore = async (
+  product: SalonProduct,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('saveProductToFirestore: professionalId é obrigatório.');
+
+  const payload = sanitizeProductForFirestore(product, professionalId);
+  try {
+    const ref = doc(dbInstance, 'products', product.id);
+    await setDoc(ref, payload, { merge: true });
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'create',
+      collection: 'products',
+      documentId: product.id,
+    });
+  }
+};
+
+export const deleteProductFromFirestore = async (
+  productId: string,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('deleteProductFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const ref = doc(dbInstance, 'products', productId);
+    await deleteDoc(ref);
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'delete',
+      collection: 'products',
+      documentId: productId,
+    });
+  }
+};
+
+// ==========================================
+// OPERAÇÕES: CONFIGURAÇÕES DA PROFISSIONAL
+// ==========================================
+
+export const fetchSettingsFromFirestore = async (
+  professionalId: string
+): Promise<SalonSettings | null> => {
+  if (!isFirebaseConfigured() || !db) return null;
+  if (!professionalId) throw new Error('fetchSettingsFromFirestore: professionalId é obrigatório.');
+
+  try {
+    const ref = doc(db, 'settings', professionalId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        salonName: data.salonName || '',
+        professionalName: data.professionalName || '',
+        phone: data.phone || '',
+        instagram: data.instagram || '',
+        enableSenacBadge: Boolean(data.enableSenacBadge),
+        defaultPauseTime: typeof data.defaultPauseTime === 'number' ? data.defaultPauseTime : 25,
+        customNotes: data.customNotes || '',
+      };
+    }
+    return null;
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'read',
+      collection: 'settings',
+      documentId: professionalId,
+    });
+  }
+};
+
+export const saveSettingsToFirestore = async (
+  settings: SalonSettings,
+  professionalId: string
+): Promise<void> => {
+  const dbInstance = requireDb();
+  if (!professionalId) throw new Error('saveSettingsToFirestore: professionalId é obrigatório.');
+
+  const payload = sanitizeSettingsForFirestore(settings, professionalId);
+  try {
+    const ref = doc(dbInstance, 'settings', professionalId);
+    await setDoc(ref, payload, { merge: true });
+  } catch (error) {
+    throw handleFirestoreError(error, {
+      operation: 'update',
+      collection: 'settings',
+      documentId: professionalId,
+    });
+  }
+};
+
+// ==========================================
+// IMPORTAÇÃO CONTROLADA E EXPLÍCITA
+// ==========================================
+
+export interface LocalImportSummary {
+  clientsCount: number;
+  evaluationsCount: number;
+  productsCount: number;
+  settingsImported: boolean;
+}
+
+/**
+ * Importa dados locais explicitamente para a conta da profissional autenticada.
+ * Ordem estrita de execução:
+ * 1. Salva Clientes primeiro (para que a regra Master-Gate clientBelongsToProfessional permita as avaliações).
+ * 2. Salva Avaliações vinculadas aos clientes recém-gravados.
+ * 3. Salva Produtos.
+ * 4. Salva Configurações.
+ */
+export const importLocalDataToFirestore = async (
+  professionalId: string,
+  localClients: ClientData[],
+  localEvaluations: FullEvaluationRecord[],
+  localProducts: SalonProduct[],
+  localSettings: SalonSettings
+): Promise<LocalImportSummary> => {
+  if (!professionalId) throw new Error('importLocalDataToFirestore: professionalId é obrigatório.');
+
+  let clientsCount = 0;
+  let evaluationsCount = 0;
+  let productsCount = 0;
+  let settingsImported = false;
+
+  // 1. Clientes
+  for (const client of localClients) {
+    await saveClientToFirestore(client, professionalId);
+    clientsCount++;
+  }
+
+  // 2. Avaliações (apenas aquelas cujos clientes agora pertencem a esta profissional)
+  for (const evaluation of localEvaluations) {
+    await saveEvaluationToFirestore(evaluation, professionalId);
+    evaluationsCount++;
+  }
+
+  // 3. Produtos
+  for (const product of localProducts) {
+    await saveProductToFirestore(product, professionalId);
+    productsCount++;
+  }
+
+  // 4. Configurações
+  if (localSettings) {
+    await saveSettingsToFirestore(localSettings, professionalId);
+    settingsImported = true;
+  }
+
+  return {
+    clientsCount,
+    evaluationsCount,
+    productsCount,
+    settingsImported,
+  };
+};

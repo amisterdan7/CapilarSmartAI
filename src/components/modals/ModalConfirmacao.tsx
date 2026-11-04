@@ -27,10 +27,10 @@ export const ModalConfirmacao: React.FC<ModalConfirmacaoProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-      <div className="bg-[#0c101d] rounded-2xl border border-[#261824] w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#231520] w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.9)] overflow-hidden">
         {/* Header with Danger Accent */}
-        <div className="p-5 border-b border-[#231520] flex items-start justify-between bg-gradient-to-r from-[#1c0e18] to-[#0c101d]">
+        <div className="p-5 border-b border-[#231520] flex items-start justify-between bg-[#0a0f1d]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.25)] flex-shrink-0">
               {isDanger ? <Trash2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}

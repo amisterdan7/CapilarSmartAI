@@ -74,10 +74,10 @@ export const StepCliente: React.FC<StepClienteProps> = ({
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Top Banner / Salon Bench Welcome */}
-      <div className="bg-gradient-to-r from-[#121626] via-[#0d111d] to-[#070a14] rounded-2xl border border-[#1e273d] p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute -right-8 -top-8 w-48 h-48 bg-[#f72585]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/30 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-3 shadow-[0_0_10px_rgba(247,37,133,0.15)]">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/20 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-3">
             <Sparkles className="w-3.5 h-3.5" /> Etapa 1 • Gerenciamento de Clientes & Atendimento
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
@@ -89,7 +89,7 @@ export const StepCliente: React.FC<StepClienteProps> = ({
         </div>
 
         {/* Disclaimer highlight according to user mandate */}
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-300 bg-[#070b14]/80 border border-[#1d2740] px-3.5 py-2 rounded-xl">
+        <div className="mt-4 flex items-center gap-2 text-xs text-slate-300 bg-[#070b14]/80 border border-[#162035] px-3.5 py-2 rounded-xl">
           <ShieldCheck className="w-4 h-4 text-[#f72585] flex-shrink-0" />
           <span>
             <strong className="text-white">Diretriz Profissional:</strong> Ferramenta cosmética e capilar para cabeleireiros. Não realiza diagnóstico médico ou dermatológico.
@@ -108,12 +108,12 @@ export const StepCliente: React.FC<StepClienteProps> = ({
             placeholder="Buscar cliente por nome, telefone ou objetivo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0c101d] border border-[#1d2740] text-base sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#f72585] focus:ring-1 focus:ring-[#f72585] transition-all min-h-[48px]"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#0a0f1d] border border-[#162035] text-base sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#f72585] focus:ring-1 focus:ring-[#f72585] transition-all min-h-[46px]"
           />
         </div>
 
         {/* Status Tabs: Ativas, Arquivadas, Todas */}
-        <div className="flex bg-[#0c101d] p-1 rounded-xl border border-[#1d2740] self-start sm:self-auto">
+        <div className="flex bg-[#0a0f1d] p-1 rounded-xl border border-[#162035] self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setActiveTab('ATIVAS')}
@@ -130,7 +130,7 @@ export const StepCliente: React.FC<StepClienteProps> = ({
             onClick={() => setActiveTab('ARQUIVADAS')}
             className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'ARQUIVADAS'
-                ? 'bg-[#1e273d] text-amber-300 border border-amber-500/30'
+                ? 'bg-[#1a2336] text-amber-300 border border-amber-500/30'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -142,7 +142,7 @@ export const StepCliente: React.FC<StepClienteProps> = ({
             onClick={() => setActiveTab('TODAS')}
             className={`px-3 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'TODAS'
-                ? 'bg-[#151c2e] text-white border border-[#263554]'
+                ? 'bg-[#141b2b] text-white border border-[#202b40]'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -154,7 +154,7 @@ export const StepCliente: React.FC<StepClienteProps> = ({
         <button
           id="btn-new-client-trigger"
           onClick={onGoToCadastro}
-          className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#111728] hover:bg-[#182138] border border-[#233152] text-slate-100 text-sm font-semibold transition-all shadow-md active:scale-98 cursor-pointer w-full sm:w-auto min-h-[48px] hover:border-[#f72585]/40 flex-shrink-0"
+          className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#0a0f1d] hover:bg-[#12192c] border border-[#1b253b] text-slate-100 text-sm font-semibold transition-all shadow-md active:scale-98 cursor-pointer w-full sm:w-auto min-h-[46px] hover:border-[#f72585]/40 flex-shrink-0"
         >
           <UserPlus className="w-4 h-4 text-[#f72585]" />
           <span>Cadastrar Nova Cliente</span>
@@ -173,8 +173,8 @@ export const StepCliente: React.FC<StepClienteProps> = ({
               id={`client-card-${client.id}`}
               className={`p-4 sm:p-5 rounded-2xl border transition-all relative flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-gradient-to-b from-[#141b2e] to-[#0c101d] border-[#f72585] shadow-[0_0_18px_rgba(247,37,133,0.25)] ring-1 ring-[#f72585]'
-                  : 'bg-[#0c101d] border-[#1b243b] hover:border-[#f72585]/40 hover:bg-[#101526]'
+                  ? 'bg-gradient-to-b from-[#12192c] to-[#0a0f1d] border-[#f72585]/70 shadow-[0_0_16px_rgba(247,37,133,0.2)] ring-1 ring-[#f72585]/50'
+                  : 'bg-[#0a0f1d] border-[#162035] hover:border-[#f72585]/40 hover:bg-[#0f1527]'
               }`}
             >
               <div>

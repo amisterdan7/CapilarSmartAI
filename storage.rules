@@ -1,0 +1,58 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidClientImage() {
+      return request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)')
+        && request.resource.metadata != null
+        && request.resource.metadata.clientId != null
+        && request.resource.metadata.professionalId == request.auth.uid;
+    }
+
+    // ==========================================
+    // CAMINHO: /photos/{uid}/clients/{clientId}/{fileName}
+    // Fotografias de tricoscopia capilar, microscopia e histórico evolutivo da cliente.
+    // Isolamento estrito por UID da profissional e vínculo com a cliente.
+    // ==========================================
+    match /photos/{uid}/clients/{clientId}/{fileName} {
+      // Leitura estrita: apenas a profissional proprietária autenticada
+      allow read: if isOwner(uid);
+
+      // Upload: limitado a 5MB, formatos de imagem válidos e metadados obrigatórios de rastreabilidade
+      allow create: if isOwner(uid) && isValidClientImage();
+
+      // Imutabilidade clínica: fotos de prontuário não podem ser sobrescritas
+      allow update: if false;
+
+      // Exclusão: coordenada e permitida exclusivamente à proprietária
+      allow delete: if isOwner(uid);
+    }
+
+    // ==========================================
+    // CAMINHO LEGADO/COMPATIBILIDADE: /photos/{uid}/{allPaths=**}
+    // Suporte restrito com validação estrita de proprietário
+    // ==========================================
+    match /photos/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && request.resource.size <= 5 * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+      allow update: if false;
+      allow delete: if isOwner(uid);
+    }
+
+    // ==========================================
+    // POLÍTICA PADRÃO: NEGAÇÃO TOTAL (Zero Trust Catchall)
+    // ==========================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

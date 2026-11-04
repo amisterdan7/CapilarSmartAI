@@ -386,8 +386,8 @@ export const StepTratamentoProfissional: React.FC<StepTratamentoProfissionalProp
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       {/* Top Banner */}
-      <div className="bg-[#0c101d] rounded-2xl border border-[#1e273d] p-6 shadow-xl relative overflow-hidden">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/30 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(247,37,133,0.15)]">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/20 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2">
           <Scissors className="w-3.5 h-3.5" /> Etapa 7 • Tratamento Personalizado & Protocolo de Bancada
         </div>
         <h2 className="text-2xl font-bold text-white tracking-tight">

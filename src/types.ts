@@ -27,9 +27,102 @@ export type TensileResistance = 'BOA_RESISTENTE' | 'MODERADA' | 'FRAGIL_QUEBRADI
 export type TouchSensation = 'MACIO_SEDOSO' | 'ASPERO_RIGIDO' | 'RESSECADO_OPOCO' | 'FRAGIL_QUEBRADICO';
 export type FrizzLevel = 'LEVE' | 'MODERADO' | 'INTENSO';
 
+export type PhotoCategory =
+  | 'TRICOSCOPIA_COURO'
+  | 'TRICOSCOPIA_HASTE'
+  | 'PANORAMICA_CABELO'
+  | 'VISAGISMO_ROSTO'
+  | 'TESTE_MECANICO'
+  | 'OUTRA';
+
+/**
+ * Registro Completo de Consentimento LGPD (Lei 13.709/2018)
+ * Atende ao princípio da finalidade específica e autonomia de vontades:
+ * - Nenhum consentimento presumido (valores padrão false)
+ * - 3 finalidades separadas e autônomas
+ * - Registro de data, versão e profissional responsável
+ * - Mecanismo de revogação explícita auditável
+ */
+export interface ConsentLGPDRecord {
+  id: string;
+  clientId: string;
+  professionalId: string;
+  professionalName: string;
+  termVersion: string; // Ex: '2026.1-TERMO-FOTOGRAFIA-TRICOLOGICA'
+  grantedAt: string; // ISO 8601
+  
+  // 3 Finalidades Específicas Autônomas (Sem consentimento em bloco)
+  prontuarioConsent: boolean; // Finalidade 1: Prontuário clínico e histórico evolutivo
+  divulgacaoConsent: boolean; // Finalidade 2: Divulgação técnico-científica / antes e depois anonimizado
+  treinamentoIaConsent: boolean; // Finalidade 3: Calibração de inteligência visual / modelos de análise
+
+  // Revogação de consentimento
+  revoked: boolean;
+  revokedAt?: string;
+  revocationReason?: string;
+}
+
+/**
+ * Registro Estruturado de Metadados de Fotografia Clínica no Firestore
+ * O arquivo binário é armazenado no Firebase Storage; metadados no Firestore.
+ */
+export interface ClientPhotoRecord {
+  id: string;
+  clientId: string;
+  evaluationId?: string; // Opcional se for foto solta de acompanhamento de bancada
+  professionalId: string;
+  category: PhotoCategory;
+  
+  // Caminhos no Firebase Storage
+  storagePath: string; // Ex: photos/{uid}/clients/{clientId}/{photoId}_full.webp
+  thumbStoragePath?: string; // Ex: photos/{uid}/clients/{clientId}/{photoId}_thumb.webp
+  originalStoragePath?: string; // Ex: photos/{uid}/clients/{clientId}/{photoId}_orig.{ext}
+  
+  // URLs de Download públicas/assinadas
+  downloadUrl: string;
+  thumbnailUrl?: string;
+  originalDownloadUrl?: string;
+  
+  // Metadados técnicos e clínicos
+  width: number;
+  height: number;
+  fileSizeBytes: number;
+  originalSizeBytes?: number;
+  isOriginalPreserved: boolean;
+  
+  // Observações da bancada e aparelho
+  notes?: string;
+  observedRegion?: string;
+  deviceFindings?: string[];
+  
+  // Vinculação de consentimento e auditoria
+  consentRecordId?: string;
+  takenAt: string; // ISO 8601
+  createdAt: string; // ISO 8601
+  syncStatus?: 'SYNCED' | 'PENDING_UPLOAD' | 'DELETION_PENDING';
+}
+
+/**
+ * Registro de Exclusão Coordenada entre Firebase Storage e Firestore
+ * Permite registrar pendências, tentativas de reconciliação e confirmação da remoção.
+ */
+export interface CoordinatedDeletionRecord {
+  id: string;
+  photoId: string;
+  professionalId: string;
+  clientId: string;
+  storagePaths: string[];
+  requestedAt: string;
+  retryCount: number;
+  status: 'PENDING_STORAGE' | 'PENDING_FIRESTORE' | 'FAILED' | 'CONFIRMED';
+  lastError?: string;
+  confirmedAt?: string;
+}
+
 export interface DigitalMicroscopeData {
   observedRegion?: string; // 'Couro Cabeludo / Topo', 'Comprimento Médio', 'Pontas', 'Linha Frontal'
   deviceImage?: string; // base64 / URL
+  photoRecordId?: string; // Vínculo com ClientPhotoRecord persistido no Storage
   deviceFindings?: string[]; // 'Cutícula entreaberta/desgastada', 'Fissuras no córtex', 'Acúmulo sebáceo folicular', 'Descamação fina', 'Afinamento distal', 'Tricoptilose/ponta bifurcada', 'Fibra íntegra e alinhada'
   deviceNotes?: string;
 }
@@ -346,6 +439,8 @@ export interface FullEvaluationRecord {
   evolutionNotes?: string; // Observações da evolução capilar (resposta ao tratamento, percepção, ajustes)
   nextEvaluationGoal?: string; // Previsão / objetivo para a próxima avaliação (ex: "Reavaliar em 4 semanas")
   images?: string[]; // Fotos e microscopia associadas individualmente a esta avaliação
+  photoRecordIds?: string[]; // Vínculo explícito com ClientPhotoRecord no Firestore/Storage
+  photoRecords?: ClientPhotoRecord[]; // Registros estruturados resolvidos
 }
 
 export type ProductSupportTag =
@@ -648,3 +743,34 @@ export interface ProfessionalReportData {
     message?: string;
   };
 }
+
+/**
+ * Perfil da Profissional autenticada (armazenado em /professionals/{uid})
+ * Atende estritamente às regras de segurança do Firestore (firestore.rules)
+ */
+export interface ProfessionalProfile {
+  uid: string;
+  email: string;
+  name: string;
+  clinicName?: string;
+  phone?: string;
+  role: 'professional' | 'admin';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface PasswordCriteria {
+  minLength: boolean;      // Pelo menos 8 caracteres
+  hasUppercase: boolean;   // Letra maiúscula (A-Z)
+  hasNumber: boolean;      // Número (0-9)
+  hasSpecialChar: boolean; // Símbolo especial (!@#$%...)
+  isValid: boolean;        // Todos os 4 critérios satisfeitos
+}
+
+export interface EmailTypoSuggestion {
+  originalDomain: string;
+  suggestedDomain: string;
+  suggestedEmail: string;
+  hasSuggestion: boolean;
+}
+

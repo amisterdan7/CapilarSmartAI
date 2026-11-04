@@ -151,7 +151,11 @@ export const FacialHairScanner: React.FC<FacialHairScannerProps> = ({
     if (ctx) {
       ctx.drawImage(source, 0, 0, width, height);
     }
-    return canvas.toDataURL('image/jpeg', 0.85);
+    try {
+      return canvas.toDataURL('image/webp', 0.85);
+    } catch {
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }
   };
 
   // Capture still from video stream

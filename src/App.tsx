@@ -35,6 +35,11 @@ import {
 import { INITIAL_CLIENTS, INITIAL_EVALUATIONS, INITIAL_PRODUCTS, INITIAL_SETTINGS } from './data/mockData';
 import { ModalProdutos } from './components/modals/ModalProdutos';
 import { ModalConfiguracoes } from './components/modals/ModalConfiguracoes';
+import { ModalGaleriaFotos } from './components/modals/ModalGaleriaFotos';
+import { useAuth } from './contexts/AuthContext';
+import { ConnectionBanner } from './components/auth/ConnectionBanner';
+import { EmailVerificationBanner } from './components/auth/EmailVerificationBanner';
+import { AuthModal, AuthModalMode } from './components/auth/AuthModal';
 import { SalonProduct, SalonSettings } from './types';
 import {
   calculateCapillaryScores,
@@ -42,6 +47,23 @@ import {
   generateHomeCareRoutine,
   generateTreatmentSchedule,
 } from './utils/calculator';
+import {
+  fetchClientsFromFirestore,
+  saveClientToFirestore,
+  deleteClientFromFirestore,
+  fetchEvaluationsFromFirestore,
+  saveEvaluationToFirestore,
+  deleteEvaluationFromFirestore,
+  fetchProductsFromFirestore,
+  saveProductToFirestore,
+  deleteProductFromFirestore,
+  fetchSettingsFromFirestore,
+  saveSettingsToFirestore,
+  importLocalDataToFirestore,
+} from './services/firestoreData';
+import { LocalImportModal } from './components/auth/LocalImportModal';
+import { abortActiveUploads } from './services/storageService';
+
 
 const DEFAULT_ANAMNESE: AnamneseData = {
   scalpType: 'NORMAL',
@@ -126,6 +148,13 @@ export default function App() {
   // Modals state
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+
+  // Authentication & session state
+  const { currentUser, profile, isOnline, signOut } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+
 
   // Active flow state
   const [currentStep, setCurrentStep] = useState<FlowStep>('CLIENTE');
@@ -185,22 +214,118 @@ export default function App() {
   );
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
-  // Sync to localStorage
+  // Estados de controle da persistência em nuvem e importação local opcional
+  const [isLoadingFirestore, setIsLoadingFirestore] = useState(false);
+  const [isLocalImportModalOpen, setIsLocalImportModalOpen] = useState(false);
+  const [localImportSummary, setLocalImportSummary] = useState<{
+    clients: number;
+    evaluations: number;
+    products: number;
+  }>({ clients: 0, evaluations: 0, products: 0 });
+
+  // Carrega os dados da profissional autenticada do Cloud Firestore
   useEffect(() => {
-    localStorage.setItem('capilar_smart_clients', JSON.stringify(clients));
-  }, [clients]);
+    if (!currentUser?.uid) return;
+
+    let isMounted = true;
+    setIsLoadingFirestore(true);
+
+    const loadCloudData = async () => {
+      try {
+        const [cloudClients, cloudEvals, cloudProducts, cloudSettings] = await Promise.all([
+          fetchClientsFromFirestore(currentUser.uid),
+          fetchEvaluationsFromFirestore(currentUser.uid),
+          fetchProductsFromFirestore(currentUser.uid),
+          fetchSettingsFromFirestore(currentUser.uid),
+        ]);
+
+        if (!isMounted) return;
+
+        // Se a conta na nuvem possui registros, popula a interface
+        if (cloudClients.length > 0 || cloudEvals.length > 0 || cloudProducts.length > 0) {
+          setClients(cloudClients);
+          setEvaluations(cloudEvals);
+          if (cloudProducts.length > 0) setProducts(cloudProducts);
+          if (cloudSettings) setSettings(cloudSettings);
+        } else {
+          // Conta nova na nuvem (base vazia no Firestore)
+          // Verifica se existem dados locais históricos no dispositivo
+          let localClientsCount = 0;
+          let localEvalsCount = 0;
+          let localProductsCount = 0;
+
+          try {
+            const rawC = localStorage.getItem('capilar_smart_clients');
+            const rawE = localStorage.getItem('capilar_smart_evaluations');
+            const rawP = localStorage.getItem('capilar_smart_products');
+            if (rawC) localClientsCount = JSON.parse(rawC).length;
+            if (rawE) localEvalsCount = JSON.parse(rawE).length;
+            if (rawP) localProductsCount = JSON.parse(rawP).length;
+          } catch {
+            // ignore
+          }
+
+          const hasPromptDismissed = localStorage.getItem(`capilar_smart_prompt_dismissed_${currentUser.uid}`) === 'true';
+
+          if ((localClientsCount > 0 || localEvalsCount > 0) && !hasPromptDismissed) {
+            setLocalImportSummary({
+              clients: localClientsCount,
+              evaluations: localEvalsCount,
+              products: localProductsCount,
+            });
+            setIsLocalImportModalOpen(true);
+          } else {
+            // Inicia com a conta da nuvem limpa sem dados locais
+            setClients([]);
+            setEvaluations([]);
+          }
+        }
+      } catch (err) {
+        console.warn('[Firestore] Falha ao recuperar registros da nuvem:', err);
+      } finally {
+        if (isMounted) setIsLoadingFirestore(false);
+      }
+    };
+
+    loadCloudData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser]);
+
+  // Sync to localStorage com isolamento de namespace
+  useEffect(() => {
+    if (currentUser?.uid) {
+      localStorage.setItem(`capilar_smart_user_${currentUser.uid}_clients`, JSON.stringify(clients));
+    } else {
+      localStorage.setItem('capilar_smart_clients', JSON.stringify(clients));
+    }
+  }, [clients, currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('capilar_smart_evaluations', JSON.stringify(evaluations));
-  }, [evaluations]);
+    if (currentUser?.uid) {
+      localStorage.setItem(`capilar_smart_user_${currentUser.uid}_evaluations`, JSON.stringify(evaluations));
+    } else {
+      localStorage.setItem('capilar_smart_evaluations', JSON.stringify(evaluations));
+    }
+  }, [evaluations, currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('capilar_smart_products', JSON.stringify(products));
-  }, [products]);
+    if (currentUser?.uid) {
+      localStorage.setItem(`capilar_smart_user_${currentUser.uid}_products`, JSON.stringify(products));
+    } else {
+      localStorage.setItem('capilar_smart_products', JSON.stringify(products));
+    }
+  }, [products, currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('capilar_smart_settings', JSON.stringify(settings));
-  }, [settings]);
+    if (currentUser?.uid) {
+      localStorage.setItem(`capilar_smart_user_${currentUser.uid}_settings`, JSON.stringify(settings));
+    } else {
+      localStorage.setItem('capilar_smart_settings', JSON.stringify(settings));
+    }
+  }, [settings, currentUser]);
 
   // Recalculate whenever Anamnese or Visual changes
   const updateCalculations = (
@@ -413,7 +538,12 @@ export default function App() {
     const evalToDelete = evaluations.find((e) => e.id === evalId);
     const nextEvaluations = evaluations.filter((e) => e.id !== evalId);
     setEvaluations(nextEvaluations);
-    localStorage.setItem('capilar_smart_evaluations', JSON.stringify(nextEvaluations));
+
+    if (currentUser?.uid) {
+      deleteEvaluationFromFirestore(evalId, currentUser.uid).catch((err) => {
+        console.error('[Firestore] Erro ao excluir avaliação na nuvem:', err);
+      });
+    }
 
     if (selectedReportEvaluation?.id === evalId) {
       setSelectedReportEvaluation(null);
@@ -582,6 +712,12 @@ export default function App() {
     markStepCompleted('CADASTRO');
     const clientHistory = evaluations.filter((e) => e.clientId === client.id);
     updateCalculations(anamnese, visual, client, clientHistory);
+
+    if (currentUser?.uid) {
+      saveClientToFirestore(client, currentUser.uid).catch((err) => {
+        console.error('[Firestore] Erro ao salvar cliente na nuvem:', err);
+      });
+    }
   };
 
   const handleCalculateAndAdvance = () => {
@@ -657,6 +793,12 @@ export default function App() {
       return [record, ...prev];
     });
 
+    if (currentUser?.uid) {
+      saveEvaluationToFirestore(record, currentUser.uid).catch((err) => {
+        console.error('[Firestore] Erro ao salvar avaliação na nuvem:', err);
+      });
+    }
+
     // Mark remaining steps
     markStepCompleted('TRATAMENTO_PROFISSIONAL');
     markStepCompleted('HOME_CARE');
@@ -700,10 +842,22 @@ export default function App() {
       }
       return [prod, ...prev];
     });
+
+    if (currentUser?.uid) {
+      saveProductToFirestore(prod, currentUser.uid).catch((err) => {
+        console.error('[Firestore] Erro ao salvar produto na nuvem:', err);
+      });
+    }
   };
 
   const handleDeleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
+
+    if (currentUser?.uid) {
+      deleteProductFromFirestore(id, currentUser.uid).catch((err) => {
+        console.error('[Firestore] Erro ao excluir produto na nuvem:', err);
+      });
+    }
   };
 
   const handleExportBackup = () => {
@@ -734,8 +888,86 @@ export default function App() {
     localStorage.removeItem('capilar_smart_settings');
   };
 
+  // Purga completa de memória no logout (Zero Data Residue)
+  const resetApplicationMemory = () => {
+    abortActiveUploads();
+    setCurrentClient(null);
+    setSelectedReportEvaluation(null);
+    setCurrentEvaluationId(`eval-${Date.now()}`);
+    setPreviousEvaluationId(undefined);
+    setAnamnese(DEFAULT_ANAMNESE);
+    setVisual(DEFAULT_VISUAL);
+    setAiInsights(undefined);
+    setIsProductsModalOpen(false);
+    setIsSettingsModalOpen(false);
+    setIsAuthModalOpen(false);
+    setIsLocalImportModalOpen(false);
+    setIsGalleryModalOpen(false);
+    setCurrentStep('INICIO');
+
+    // Restaura o ambiente local legado sem perdas
+    const savedClients = localStorage.getItem('capilar_smart_clients');
+    const savedEvaluations = localStorage.getItem('capilar_smart_evaluations');
+    const savedProducts = localStorage.getItem('capilar_smart_products');
+    const savedSettings = localStorage.getItem('capilar_smart_settings');
+
+    setClients(savedClients ? JSON.parse(savedClients) : INITIAL_CLIENTS);
+    setEvaluations(savedEvaluations ? JSON.parse(savedEvaluations) : INITIAL_EVALUATIONS);
+    setProducts(savedProducts ? JSON.parse(savedProducts) : INITIAL_PRODUCTS);
+    setSettings(savedSettings ? JSON.parse(savedSettings) : INITIAL_SETTINGS);
+  };
+
+  const handleLogout = async () => {
+    try {
+      resetApplicationMemory();
+      await signOut();
+    } catch (err) {
+      console.error('Erro ao encerrar sessão da profissional:', err);
+    }
+  };
+
+  // Handlers para o Modal de Importação Local Opcional
+  const handleConfirmLocalImport = async () => {
+    if (!currentUser?.uid) return;
+    try {
+      const rawC = localStorage.getItem('capilar_smart_clients');
+      const rawE = localStorage.getItem('capilar_smart_evaluations');
+      const rawP = localStorage.getItem('capilar_smart_products');
+      const rawS = localStorage.getItem('capilar_smart_settings');
+
+      const localC: ClientData[] = rawC ? JSON.parse(rawC) : [];
+      const localE: FullEvaluationRecord[] = rawE ? JSON.parse(rawE) : [];
+      const localP: SalonProduct[] = rawP ? JSON.parse(rawP) : [];
+      const localS: SalonSettings = rawS ? JSON.parse(rawS) : settings;
+
+      await importLocalDataToFirestore(currentUser.uid, localC, localE, localP, localS);
+
+      // Marca o prompt como respondido para esta usuária
+      localStorage.setItem(`capilar_smart_prompt_dismissed_${currentUser.uid}`, 'true');
+
+      // Popula o estado com os dados importados
+      setClients(localC);
+      setEvaluations(localE);
+      if (localP.length > 0) setProducts(localP);
+      if (localS) setSettings(localS);
+    } catch (err) {
+      console.error('[Import] Erro ao importar dados locais para Firestore:', err);
+      throw err;
+    }
+  };
+
+  const handleDeclineLocalImport = () => {
+    if (currentUser?.uid) {
+      localStorage.setItem(`capilar_smart_prompt_dismissed_${currentUser.uid}`, 'true');
+    }
+    setIsLocalImportModalOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#060913] text-[#f1f5f9] flex flex-col selection:bg-[#f72585]/30 selection:text-white relative">
+      {/* Aviso discreto de status de conectividade */}
+      <ConnectionBanner isOnline={isOnline} />
+
       {/* Top Professional Header */}
       <Header
         currentClient={currentClient}
@@ -748,7 +980,18 @@ export default function App() {
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         salonName={settings.salonName}
         enableSenacBadge={settings.enableSenacBadge}
+        currentUser={currentUser}
+        profile={profile}
+        onOpenAuthModal={() => {
+          setAuthModalMode('login');
+          setIsAuthModalOpen(true);
+        }}
+        onLogout={handleLogout}
       />
+
+      {/* Banner de Verificação de E-mail */}
+      <EmailVerificationBanner />
+
 
       {/* 9-Step Progress Pipeline */}
       {currentStep !== 'INICIO' && (
@@ -760,7 +1003,7 @@ export default function App() {
       )}
 
       {/* Main Workspace Area Optimized for Salon Tablet Bench */}
-      <main className={`flex-1 w-full ${currentStep === 'INICIO' ? 'p-0' : 'max-w-7xl mx-auto p-4 sm:p-6 md:p-8'}`}>
+      <main className={`flex-1 w-full ${currentStep === 'INICIO' ? 'p-0' : 'max-w-7xl mx-auto p-3.5 sm:p-6 md:p-8 animate-fadeIn'}`}>
         {/* Step 0: TELA INICIAL */}
         {currentStep === 'INICIO' && (
           <StepInicio
@@ -870,6 +1113,7 @@ export default function App() {
             }}
             onBack={() => setCurrentStep('ANAMNESE')}
             onContinue={handleCalculateAndAdvance}
+            onOpenGallery={() => setIsGalleryModalOpen(true)}
           />
         )}
 
@@ -1062,10 +1306,58 @@ export default function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         settings={settings}
-        onSaveSettings={(newSet) => setSettings(newSet)}
+        onSaveSettings={(newSet) => {
+          setSettings(newSet);
+          if (currentUser?.uid) {
+            saveSettingsToFirestore(newSet, currentUser.uid).catch((err) => {
+              console.error('[Firestore] Erro ao salvar configurações na nuvem:', err);
+            });
+          }
+        }}
         onExportBackup={handleExportBackup}
         onResetData={handleResetDemoData}
+      />
+
+      {/* Modal: Autenticação da Profissional (Login / Cadastro / Recuperação) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
+
+      {/* Modal: Importação Local Opcional e Transparente (Fase 3) */}
+      <LocalImportModal
+        isOpen={isLocalImportModalOpen}
+        onClose={() => setIsLocalImportModalOpen(false)}
+        summary={localImportSummary}
+        userEmail={profile?.email || currentUser?.email || undefined}
+        onConfirmImport={handleConfirmLocalImport}
+        onDeclineImport={handleDeclineLocalImport}
+      />
+
+      {/* Modal: Acervo Fotográfico e Tricoscopia Clínica (Fase 4) */}
+      <ModalGaleriaFotos
+        isOpen={isGalleryModalOpen}
+        onClose={() => setIsGalleryModalOpen(false)}
+        client={currentClient}
+        professionalId={currentUser?.uid || 'guest_local_professional'}
+        professionalName={profile?.name || settings.professionalName || 'Profissional'}
+        currentEvaluationId={currentEvaluationId}
+        onPhotoSelectedForMicroscope={(photo) => {
+          setVisual((prev) => ({
+            ...prev,
+            microscope: {
+              ...prev.microscope,
+              deviceImage: photo.downloadUrl,
+              photoRecordId: photo.id,
+              deviceNotes: photo.notes || prev.microscope?.deviceNotes,
+              observedRegion: photo.observedRegion || prev.microscope?.observedRegion,
+              deviceFindings: photo.deviceFindings || prev.microscope?.deviceFindings,
+            },
+          }));
+        }}
       />
     </div>
   );
 }
+

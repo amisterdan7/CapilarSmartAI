@@ -266,10 +266,10 @@ Olá, *${rec.clientName}*! Segue o resumo do seu atendimento capilar profissiona
       )}
 
       {/* Top Banner */}
-      <div className="bg-[#0c101d] rounded-2xl border border-[#1e273d] p-4 sm:p-6 shadow-xl relative overflow-hidden no-print">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] p-4 sm:p-6 shadow-xl relative overflow-hidden no-print">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/30 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(247,37,133,0.15)]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/20 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2">
               <History className="w-3.5 h-3.5" /> Etapa 9 • Histórico, Evolução & Gestão de Avaliações
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">

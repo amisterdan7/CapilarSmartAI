@@ -51,7 +51,7 @@ export const StepProgress: React.FC<StepProgressProps> = ({
   const activeStep = STEPS[currentIndex] || STEPS[0];
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto scroll active step into view on mobile
+  // Auto scroll active step into view on mobile & tablet
   useEffect(() => {
     if (scrollContainerRef.current) {
       const activeEl = scrollContainerRef.current.querySelector(
@@ -80,15 +80,15 @@ export const StepProgress: React.FC<StepProgressProps> = ({
   };
 
   return (
-    <div className="w-full bg-[#070a14] border-b border-[#182033] transition-all">
-      {/* Mobile Step Header (Visible on phones < 640px) */}
-      <div className="sm:hidden px-3 pt-2.5 pb-2 border-b border-[#141a2a]">
+    <nav aria-label="Progresso da Avaliação" className="w-full bg-[#060913]/95 backdrop-blur-md border-b border-[#141b2a] transition-all">
+      {/* Mobile Step Bar (< 640px) */}
+      <div className="sm:hidden px-3 pt-2.5 pb-2 border-b border-[#121826]">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={handlePrevStep}
             disabled={currentIndex === 0}
-            className="p-1.5 rounded-xl bg-[#0e1322] text-slate-300 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all border border-[#1f2a42]"
+            className="p-2 rounded-xl bg-[#0c101d] text-slate-300 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all border border-[#1b253b] h-[38px] w-[38px] flex items-center justify-center cursor-pointer"
             aria-label="Etapa anterior"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -98,7 +98,7 @@ export const StepProgress: React.FC<StepProgressProps> = ({
             <span className="text-[10px] font-bold text-[#f72585] uppercase tracking-wider block">
               Etapa {currentIndex + 1} de {STEPS.length}
             </span>
-            <p className="text-xs font-bold text-white truncate">
+            <p className="text-xs font-semibold text-white truncate">
               {activeStep.label}
             </p>
           </div>
@@ -107,23 +107,23 @@ export const StepProgress: React.FC<StepProgressProps> = ({
             type="button"
             onClick={handleNextStep}
             disabled={currentIndex === STEPS.length - 1}
-            className="p-1.5 rounded-xl bg-[#0e1322] text-slate-300 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all border border-[#1f2a42]"
+            className="p-2 rounded-xl bg-[#0c101d] text-slate-300 disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-all border border-[#1b253b] h-[38px] w-[38px] flex items-center justify-center cursor-pointer"
             aria-label="Próxima etapa"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Mini progress bar on mobile */}
-        <div className="w-full h-1 bg-[#121829] rounded-full overflow-hidden mt-2">
+        {/* Mini progress indicator */}
+        <div className="w-full h-1 bg-[#121828] rounded-full overflow-hidden mt-2">
           <div
-            className="h-full bg-gradient-to-r from-[#e01e84] via-[#f72585] to-[#ff007f] transition-all duration-300 shadow-[0_0_10px_rgba(247,37,133,0.6)]"
+            className="h-full bg-gradient-to-r from-[#e01e84] via-[#f72585] to-[#ff007f] transition-all duration-300 shadow-[0_0_8px_rgba(247,37,133,0.6)]"
             style={{ width: `${((currentIndex + 1) / STEPS.length) * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Main Track of Steps (Optimized for Mobile scroll, Tablet tap, Desktop expansion) */}
+      {/* Main Track of Steps (Tablet Bench & Desktop) */}
       <div className="max-w-7xl mx-auto px-2 sm:px-6 py-2 sm:py-2.5">
         <div
           ref={scrollContainerRef}
@@ -139,18 +139,19 @@ export const StepProgress: React.FC<StepProgressProps> = ({
               <React.Fragment key={step.id}>
                 <button
                   id={`nav-step-${step.id.toLowerCase()}`}
+                  type="button"
                   onClick={() => onStepClick(step.id)}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 cursor-pointer min-h-[38px] sm:min-h-[40px] ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 cursor-pointer h-[38px] sm:h-[40px] ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#e01e84] via-[#f72585] to-[#ff007f] text-white font-bold shadow-[0_0_16px_rgba(247,37,133,0.4)] border border-[#ff66b2]/50 scale-[1.02]'
+                      ? 'bg-gradient-to-r from-[#e01e84] via-[#f72585] to-[#ff007f] text-white font-bold shadow-[0_0_14px_rgba(247,37,133,0.35)] border border-[#ff66b2]/50 scale-[1.01]'
                       : isCompleted || isPast
-                      ? 'bg-[#0e1322] text-slate-200 hover:bg-[#151c2e] border border-[#1e283f] hover:border-[#f72585]/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#101524] border border-transparent'
+                      ? 'bg-[#0c101d] text-slate-200 hover:bg-[#12182a] border border-[#1a233a] hover:border-[#f72585]/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#0c101d] border border-transparent'
                   }`}
                 >
                   <span className="relative flex items-center justify-center flex-shrink-0">
                     {isCompleted && !isActive ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
                     ) : (
                       <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isActive ? 'text-white' : isPast ? 'text-[#f72585]' : 'text-slate-400'}`} />
                     )}
@@ -162,7 +163,7 @@ export const StepProgress: React.FC<StepProgressProps> = ({
                 {index < STEPS.length - 1 && (
                   <div
                     className={`h-[1px] w-2 sm:w-3 md:w-4 flex-shrink-0 transition-colors ${
-                      isPast ? 'bg-gradient-to-r from-[#e01e84] to-[#f72585]' : 'bg-[#182033]'
+                      isPast ? 'bg-gradient-to-r from-[#e01e84] to-[#f72585]' : 'bg-[#151c2d]'
                     }`}
                   />
                 )}
@@ -171,6 +172,6 @@ export const StepProgress: React.FC<StepProgressProps> = ({
           })}
         </div>
       </div>
-    </div>
+    </nav>
   );
 };

@@ -15,6 +15,7 @@ import {
 import { VisualAnalysisData, CurvatureType, StrandThickness, HairDensity, ElasticityTest, PorosityTest, EndsState } from '../../types';
 import { CURVATURE_CATALOG } from '../../data/hairKnowledge';
 import { FacialHairScanner } from '../FacialHairScanner';
+import { processClinicalImage } from '../../utils/imageCompressor';
 
 interface StepAnaliseVisualProps {
   data: VisualAnalysisData;
@@ -23,6 +24,7 @@ interface StepAnaliseVisualProps {
   onChange: (data: VisualAnalysisData) => void;
   onBack: () => void;
   onContinue: () => void;
+  onOpenGallery?: () => void;
 }
 
 export const StepAnaliseVisual: React.FC<StepAnaliseVisualProps> = ({
@@ -32,6 +34,7 @@ export const StepAnaliseVisual: React.FC<StepAnaliseVisualProps> = ({
   onChange,
   onBack,
   onContinue,
+  onOpenGallery,
 }) => {
   const [selectedCurvatureCategory, setSelectedCurvatureCategory] = useState<'Todos' | 'Lisos' | 'Ondulados' | 'Cacheados' | 'Crespos'>('Todos');
   const [showBenchHelper, setShowBenchHelper] = useState(false);
@@ -89,15 +92,15 @@ export const StepAnaliseVisual: React.FC<StepAnaliseVisualProps> = ({
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       {/* Header Banner */}
-      <div className="bg-[#0c101d] rounded-2xl border border-[#1e273d] p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] p-5 sm:p-6 shadow-xl relative overflow-hidden">
         <div className="flex items-center justify-between">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/30 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2 shadow-[0_0_10px_rgba(247,37,133,0.15)]">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/20 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2">
             <Eye className="w-3.5 h-3.5" /> Etapa 4 • Análise Visual & Tátil de Bancada
           </div>
           <button
             type="button"
             onClick={() => setShowBenchHelper(!showBenchHelper)}
-            className="text-xs text-[#f72585] hover:underline flex items-center gap-1 cursor-pointer"
+            className="text-xs text-[#f72585] hover:underline flex items-center gap-1 cursor-pointer min-h-[36px]"
           >
             <HelpCircle className="w-3.5 h-3.5" /> Como testar na bancada?
           </button>
@@ -689,9 +692,20 @@ export const StepAnaliseVisual: React.FC<StepAnaliseVisualProps> = ({
               Inspeção da fibra sob aumento óptico para cruzamento de dados com a avaliação da bancada.
             </p>
           </div>
-          <span className="text-[11px] text-slate-400 px-3 py-1 rounded-lg bg-[#060913] border border-[#1b2338] self-start sm:self-auto">
-            Integração Digital
-          </span>
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <span className="text-[11px] text-cyan-400 px-3 py-1 rounded-lg bg-cyan-950/40 border border-cyan-800/40 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" /> Fidelidade Clínica & LGPD
+            </span>
+            {onOpenGallery && (
+              <button
+                type="button"
+                onClick={onOpenGallery}
+                className="text-[11px] font-semibold text-[#f72585] px-3 py-1 rounded-lg bg-[#f72585]/10 border border-[#f72585]/30 hover:bg-[#f72585]/20 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" /> Abrir Galeria / Acervo
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Região Observada */}
@@ -827,20 +841,25 @@ export const StepAnaliseVisual: React.FC<StepAnaliseVisualProps> = ({
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          onChange({
-                            ...data,
-                            microscope: {
-                              ...data.microscope,
-                              deviceImage: reader.result as string,
-                            },
-                          });
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const processed = await processClinicalImage(file, 'TRICOSCOPIA_COURO');
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            onChange({
+                              ...data,
+                              microscope: {
+                                ...data.microscope,
+                                deviceImage: reader.result as string,
+                              },
+                            });
+                          };
+                          reader.readAsDataURL(processed.optimizedBlob);
+                        } catch (err) {
+                          console.error('Falha ao processar imagem clínica:', err);
+                        }
                       }
                     }}
                   />

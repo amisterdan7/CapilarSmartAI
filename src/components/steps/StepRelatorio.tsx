@@ -175,9 +175,9 @@ ${report.nextReassessment.goal} (${report.nextReassessment.estimatedTimeframe})`
       `}</style>
 
       {/* Top Banner & Quick Controls (Hidden during print) */}
-      <div className="no-print bg-[#0c101d] rounded-2xl border border-[#1e273d] p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="no-print bg-[#0a0f1d] rounded-2xl border border-[#162035] p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/30 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f72585]/10 border border-[#f72585]/20 text-[#f72585] text-xs font-semibold uppercase tracking-wider mb-2">
             <FileText className="w-3.5 h-3.5" /> Etapa 9 • Relatório Profissional da Avaliação
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">

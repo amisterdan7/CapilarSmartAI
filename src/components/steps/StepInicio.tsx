@@ -39,17 +39,17 @@ export const StepInicio: React.FC<StepInicioProps> = ({
   enableSenacBadge = true,
 }) => {
   return (
-    <div className="relative min-h-[calc(100vh-140px)] flex flex-col justify-between overflow-hidden bg-[#05070e]">
+    <div className="relative min-h-[calc(100vh-140px)] flex flex-col justify-between overflow-hidden bg-[#060913]">
       {/* Background Cybernetic Glow & Hair Strand Grid */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Ambient magenta/neon pink glows */}
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[750px] h-[550px] bg-gradient-to-b from-[#ff007f]/15 via-[#f72585]/8 to-transparent rounded-full blur-[140px]" />
-        <div className="absolute top-1/3 -left-32 w-96 h-96 bg-[#e01e84]/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-10 -right-32 w-96 h-96 bg-[#f72585]/10 rounded-full blur-[120px]" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[750px] h-[550px] bg-gradient-to-b from-[#ff007f]/10 via-[#f72585]/5 to-transparent rounded-full blur-[140px]" />
+        <div className="absolute top-1/3 -left-32 w-96 h-96 bg-[#e01e84]/8 rounded-full blur-[120px]" />
+        <div className="absolute bottom-10 -right-32 w-96 h-96 bg-[#f72585]/8 rounded-full blur-[120px]" />
 
         {/* Subtle Cyber Grid Lines */}
         <div 
-          className="absolute inset-0 opacity-[0.035]"
+          className="absolute inset-0 opacity-[0.025]"
           style={{
             backgroundImage: `linear-gradient(#f72585 1px, transparent 1px), linear-gradient(to right, #f72585 1px, transparent 1px)`,
             backgroundSize: '48px 48px',
@@ -58,7 +58,7 @@ export const StepInicio: React.FC<StepInicioProps> = ({
 
         {/* Organic Technological Hair Strands (SVG) */}
         <svg
-          className="absolute inset-0 w-full h-full opacity-[0.12]"
+          className="absolute inset-0 w-full h-full opacity-[0.10]"
           viewBox="0 0 1440 900"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -89,12 +89,12 @@ export const StepInicio: React.FC<StepInicioProps> = ({
       </div>
 
       {/* Main Hero Container */}
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14 pb-12 flex flex-col items-center text-center">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-12 flex flex-col items-center text-center">
         
         {/* Project Tag / SENAC Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#121626] border border-[#f72585]/30 text-[#f72585] text-xs font-semibold tracking-wider mb-6 sm:mb-8 shadow-[0_0_15px_rgba(247,37,133,0.15)] animate-pulse">
-          <Zap className="w-3.5 h-3.5 text-[#ff007f]" />
-          <span>PROTÓTIPO PROFISSIONAL PARA BANCADA DE SALÃO</span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0c1120] border border-[#1b253b] text-slate-300 text-xs font-medium tracking-wide mb-6 sm:mb-8">
+          <Zap className="w-3.5 h-3.5 text-[#f72585]" />
+          <span>Plataforma Profissional para Bancada de Salão</span>
           {enableSenacBadge && (
             <>
               <span className="text-slate-600">•</span>
@@ -182,9 +182,9 @@ export const StepInicio: React.FC<StepInicioProps> = ({
         {/* Technology Architecture Highlights (3 Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full text-left mb-12">
           {/* Card 1 */}
-          <div className="p-5 rounded-2xl bg-[#0c101d]/90 border border-[#1e273d] hover:border-[#f72585]/40 transition-all duration-300 relative group overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f72585]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/30 flex items-center justify-center text-[#f72585] mb-3.5">
+          <div className="p-5 rounded-2xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 transition-all duration-200 relative group overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f72585]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/20 flex items-center justify-center text-[#f72585] mb-3.5">
               <Activity className="w-5 h-5" />
             </div>
             <h3 className="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">
@@ -196,9 +196,9 @@ export const StepInicio: React.FC<StepInicioProps> = ({
           </div>
 
           {/* Card 2 */}
-          <div className="p-5 rounded-2xl bg-[#0c101d]/90 border border-[#1e273d] hover:border-[#f72585]/40 transition-all duration-300 relative group overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f72585]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/30 flex items-center justify-center text-[#f72585] mb-3.5">
+          <div className="p-5 rounded-2xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 transition-all duration-200 relative group overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f72585]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/20 flex items-center justify-center text-[#f72585] mb-3.5">
               <Cpu className="w-5 h-5" />
             </div>
             <h3 className="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">
@@ -210,9 +210,9 @@ export const StepInicio: React.FC<StepInicioProps> = ({
           </div>
 
           {/* Card 3 */}
-          <div className="p-5 rounded-2xl bg-[#0c101d]/90 border border-[#1e273d] hover:border-[#f72585]/40 transition-all duration-300 relative group overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f72585]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/30 flex items-center justify-center text-[#f72585] mb-3.5">
+          <div className="p-5 rounded-2xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 transition-all duration-200 relative group overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f72585]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/20 flex items-center justify-center text-[#f72585] mb-3.5">
               <Sparkles className="w-5 h-5" />
             </div>
             <h3 className="text-sm font-bold text-white mb-1.5 flex items-center gap-1.5">
@@ -226,17 +226,17 @@ export const StepInicio: React.FC<StepInicioProps> = ({
 
         {/* Direct Action Hub Grid (4 Fast Navigation Tiles) */}
         <div className="w-full">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 text-center sm:text-left">
             Módulos Rápidos do Sistema
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               onClick={onOpenClients}
-              className="p-3.5 rounded-xl bg-[#0c101d] border border-[#1e273d] hover:border-[#f72585]/50 text-left transition-all hover:bg-[#11172a] cursor-pointer group"
+              className="p-3.5 rounded-xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 text-left transition-all hover:bg-[#111728] cursor-pointer group active:scale-98 min-h-[72px]"
             >
               <div className="flex items-center justify-between mb-2">
                 <Users className="w-4 h-4 text-[#f72585]" />
-                <span className="text-[10px] font-bold text-slate-400 group-hover:text-[#f72585]">
+                <span className="text-[10px] font-semibold text-slate-400 group-hover:text-[#f72585]">
                   {totalClients} cad.
                 </span>
               </div>
@@ -246,11 +246,11 @@ export const StepInicio: React.FC<StepInicioProps> = ({
 
             <button
               onClick={onOpenHistory}
-              className="p-3.5 rounded-xl bg-[#0c101d] border border-[#1e273d] hover:border-[#f72585]/50 text-left transition-all hover:bg-[#11172a] cursor-pointer group"
+              className="p-3.5 rounded-xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 text-left transition-all hover:bg-[#111728] cursor-pointer group active:scale-98 min-h-[72px]"
             >
               <div className="flex items-center justify-between mb-2">
                 <Clock className="w-4 h-4 text-[#f72585]" />
-                <span className="text-[10px] font-bold text-slate-400 group-hover:text-[#f72585]">
+                <span className="text-[10px] font-semibold text-slate-400 group-hover:text-[#f72585]">
                   {totalEvaluations} aval.
                 </span>
               </div>
@@ -260,11 +260,11 @@ export const StepInicio: React.FC<StepInicioProps> = ({
 
             <button
               onClick={onOpenProducts}
-              className="p-3.5 rounded-xl bg-[#0c101d] border border-[#1e273d] hover:border-[#f72585]/50 text-left transition-all hover:bg-[#11172a] cursor-pointer group"
+              className="p-3.5 rounded-xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 text-left transition-all hover:bg-[#111728] cursor-pointer group active:scale-98 min-h-[72px]"
             >
               <div className="flex items-center justify-between mb-2">
                 <Package className="w-4 h-4 text-[#f72585]" />
-                <span className="text-[10px] font-bold text-[#f72585]">Catálogo</span>
+                <span className="text-[10px] font-semibold text-[#f72585]">Catálogo</span>
               </div>
               <p className="text-xs font-bold text-white">Produtos</p>
               <p className="text-[11px] text-slate-400">Estoque & Home Care</p>
@@ -272,11 +272,11 @@ export const StepInicio: React.FC<StepInicioProps> = ({
 
             <button
               onClick={onOpenSettings}
-              className="p-3.5 rounded-xl bg-[#0c101d] border border-[#1e273d] hover:border-[#f72585]/50 text-left transition-all hover:bg-[#11172a] cursor-pointer group"
+              className="p-3.5 rounded-xl bg-[#0a0f1d] border border-[#162035] hover:border-[#f72585]/40 text-left transition-all hover:bg-[#111728] cursor-pointer group active:scale-98 min-h-[72px]"
             >
               <div className="flex items-center justify-between mb-2">
                 <Settings className="w-4 h-4 text-[#f72585]" />
-                <span className="text-[10px] font-bold text-slate-400">Diretrizes</span>
+                <span className="text-[10px] font-semibold text-slate-400">Diretrizes</span>
               </div>
               <p className="text-xs font-bold text-white">Configurações</p>
               <p className="text-[11px] text-slate-400">Dados do salão</p>

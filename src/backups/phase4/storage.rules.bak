@@ -1,0 +1,48 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidImage() {
+      return request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+
+    // ==========================================
+    // CAMINHO: /photos/{uid}/{allPaths=**}
+    // Fotografias de tricoscopia capilar, microscopia e análise facial.
+    // Estrutura suportada:
+    //   - /photos/{uid}/clients/{clientId}/{fileName}
+    //   - /photos/{uid}/evaluations/{evaluationId}/{fileName}
+    //   - /photos/{uid}/facial/{clientId}/{fileName}
+    // ==========================================
+    match /photos/{uid}/{allPaths=**} {
+      // Leitura estrita: apenas a profissional proprietária autenticada.
+      // Proibido qualquer acesso anônimo ou público.
+      allow read: if isOwner(uid);
+
+      // Upload (criação) e Atualização:
+      // Restrito à profissional proprietária, limitado a 5MB e formatos de imagem seguros.
+      allow create, update: if isOwner(uid) && isValidImage();
+
+      // Exclusão:
+      // Apenas a profissional proprietária pode remover fotos da sua conta.
+      allow delete: if isOwner(uid);
+    }
+
+    // ==========================================
+    // POLÍTICA PADRÃO: NEGAÇÃO TOTAL (Zero Trust Catchall)
+    // Bloqueia qualquer outro arquivo, bucket público ou varredura de diretório.
+    // ==========================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

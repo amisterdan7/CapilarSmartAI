@@ -48,16 +48,16 @@ export const ModalConfiguracoes: React.FC<ModalConfiguracoesProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-      <div className="bg-[#0c101d] rounded-2xl border border-[#1e273d] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-[#0a0f1d] rounded-2xl border border-[#162035] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden">
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-[#1b2338] flex items-center justify-between bg-gradient-to-r from-[#11172a] via-[#0c101d] to-[#0c101d]">
+        <div className="p-4 sm:p-6 border-b border-[#162035] flex items-center justify-between bg-[#0a0f1d]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/30 flex items-center justify-center text-[#f72585] shadow-[0_0_10px_rgba(247,37,133,0.2)]">
+            <div className="w-10 h-10 rounded-xl bg-[#f72585]/10 border border-[#f72585]/20 flex items-center justify-center text-[#f72585]">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f72585]/10 text-[#f72585] text-[10px] font-bold tracking-wider uppercase mb-1 border border-[#f72585]/30 shadow-[0_0_8px_rgba(247,37,133,0.15)]">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f72585]/10 text-[#f72585] text-[10px] font-bold tracking-wider uppercase mb-1 border border-[#f72585]/20">
                 <Sparkles className="w-3 h-3" /> CAPILAR SMART IA • Sistema
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">

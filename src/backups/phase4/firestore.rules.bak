@@ -1,0 +1,399 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNÇÕES AUXILIARES DE AUTENTICAÇÃO E ACESSO
+    // ==========================================
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // O status de administrador é verificado EXCLUSIVAMENTE pela existência
+    // do documento na coleção autoritativa /admins/{uid}.
+    // Escrita nessa coleção é bloqueada para qualquer SDK de cliente.
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isRecordOwner(resourceData) {
+      return isSignedIn() && resourceData.professionalId == request.auth.uid;
+    }
+
+    function isNewRecordOwner(requestData) {
+      return isSignedIn() && requestData.professionalId == request.auth.uid;
+    }
+
+    // Validação relacional Master-Gate: Garante que o cliente referenciado
+    // existe e pertence à mesma profissional autenticada.
+    function clientBelongsToProfessional(clientId, professionalUid) {
+      return exists(/databases/$(database)/documents/clients/$(clientId)) &&
+        get(/databases/$(database)/documents/clients/$(clientId)).data.professionalId == professionalUid;
+    }
+
+    // Funções utilitárias seguras de tipagem e limites (compatíveis com CEL sem erro de chave indefinida)
+    function isNonEmptyString(val, maxLen) {
+      return val is string && val.size() > 0 && val.size() <= maxLen;
+    }
+
+    function isOptionalString(data, key, maxLen) {
+      return !(key in data) || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isOptionalNumber(data, key, minVal, maxVal) {
+      return !(key in data) || (data[key] is number && data[key] >= minVal && data[key] <= maxVal);
+    }
+
+    function isOptionalBool(data, key) {
+      return !(key in data) || data[key] is bool;
+    }
+
+    function isOptionalMap(data, key) {
+      return !(key in data) || data[key] is map;
+    }
+
+    function isOptionalList(data, key) {
+      return !(key in data) || data[key] is list;
+    }
+
+    // ==========================================
+    // COLEÇÃO: /admins
+    // ==========================================
+    // Leitura: Permitida somente ao próprio administrador autenticado.
+    // Escrita: TOTALMENTE BLOQUEADA via SDK cliente (allow write: if false).
+    // Concessão de papel admin é restrita a provisionamento out-of-band via Firebase Admin SDK.
+    match /admins/{adminUid} {
+      allow read: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow write: if false;
+    }
+
+    // ==========================================
+    // COLEÇÃO: /professionals (Perfis profissionais)
+    // ==========================================
+    match /professionals/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      
+      // Criação de perfil profissional:
+      // 1. Somente o próprio usuário autenticado pode criar seu perfil (uid == auth.uid)
+      // 2. O e-mail DEVE corresponder obrigatoriamente à identidade autenticada no token
+      // 3. Impossibilidade de autoatribuição de 'admin'
+      // 4. Whitelist estrita de campos permitidos
+      allow create: if isOwner(uid) &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'clinicName', 'phone', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.keys().hasAll(['uid', 'email', 'name', 'createdAt']) &&
+        request.resource.data.uid == uid &&
+        request.resource.data.email == request.auth.token.email &&
+        isNonEmptyString(request.resource.data.email, 150) &&
+        isNonEmptyString(request.resource.data.name, 100) &&
+        isOptionalString(request.resource.data, 'clinicName', 100) &&
+        isOptionalString(request.resource.data, 'phone', 30) &&
+        isNonEmptyString(request.resource.data.createdAt, 50) &&
+        (!('role' in request.resource.data) || request.resource.data.role == 'professional');
+        
+      // Atualização de perfil profissional:
+      // 1. Imutabilidade absoluta: uid, email e createdAt NÃO podem ser alterados
+      // 2. Proibição de elevação de privilégios (role não pode ser modificada)
+      // 3. Validação de tamanho e tipos de campos atualizados
+      allow update: if isOwner(uid) &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'name', 'clinicName', 'phone', 'role', 'createdAt', 'updatedAt']) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+        isNonEmptyString(request.resource.data.name, 100) &&
+        isOptionalString(request.resource.data, 'clinicName', 100) &&
+        isOptionalString(request.resource.data, 'phone', 30) &&
+        isOptionalString(request.resource.data, 'updatedAt', 50);
+
+      // Exclusão de perfil: apenas administrador pode excluir contas
+      allow delete: if isAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: /settings (Configurações da profissional)
+    // ==========================================
+    // Padrão consistente de identificação: O ID do documento é SEMPRE o UID da profissional
+    match /settings/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      // Criação:
+      // - O documento DEVE ter como ID o próprio UID autenticado
+      // - professionalId obrigatório e coincidente com auth.uid
+      // - Whitelist de campos permitidos
+      allow create: if isOwner(uid) &&
+        request.resource.data.keys().hasOnly([
+          'professionalId', 'salonName', 'professionalName', 'phone',
+          'instagram', 'enableSenacBadge', 'defaultPauseTime', 'customNotes', 'updatedAt'
+        ]) &&
+        request.resource.data.professionalId == uid &&
+        isOptionalString(request.resource.data, 'salonName', 100) &&
+        isOptionalString(request.resource.data, 'professionalName', 100) &&
+        isOptionalString(request.resource.data, 'phone', 30) &&
+        isOptionalString(request.resource.data, 'instagram', 50) &&
+        isOptionalBool(request.resource.data, 'enableSenacBadge') &&
+        isOptionalNumber(request.resource.data, 'defaultPauseTime', 0, 180) &&
+        isOptionalString(request.resource.data, 'customNotes', 2000);
+
+      // Atualização:
+      // - Somente a proprietária autenticada
+      // - professionalId imutável
+      allow update: if isOwner(uid) &&
+        request.resource.data.keys().hasOnly([
+          'professionalId', 'salonName', 'professionalName', 'phone',
+          'instagram', 'enableSenacBadge', 'defaultPauseTime', 'customNotes', 'updatedAt'
+        ]) &&
+        request.resource.data.professionalId == resource.data.professionalId &&
+        isOptionalString(request.resource.data, 'salonName', 100) &&
+        isOptionalString(request.resource.data, 'professionalName', 100) &&
+        isOptionalString(request.resource.data, 'phone', 30) &&
+        isOptionalString(request.resource.data, 'instagram', 50) &&
+        isOptionalBool(request.resource.data, 'enableSenacBadge') &&
+        isOptionalNumber(request.resource.data, 'defaultPauseTime', 0, 180) &&
+        isOptionalString(request.resource.data, 'customNotes', 2000);
+
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: /clients (Clientes das profissionais)
+    // ==========================================
+    match /clients/{clientId} {
+      allow read: if isRecordOwner(resource.data) || isAdmin();
+
+      // Criação de cliente:
+      // - professionalId deve corresponder ao usuário autenticado
+      // - Campos obrigatórios: id, professionalId, name, createdAt
+      // - id deve corresponder ao clientId da rota
+      // - Whitelist de campos permitidos
+      allow create: if isNewRecordOwner(request.resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'professionalId', 'name', 'phone', 'email', 'age',
+          'hairGoal', 'mainComplaint', 'notes', 'archived', 'archivedAt',
+          'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.keys().hasAll(['id', 'professionalId', 'name', 'createdAt']) &&
+        request.resource.data.id == clientId &&
+        isNonEmptyString(request.resource.data.name, 150) &&
+        isNonEmptyString(request.resource.data.createdAt, 50) &&
+        isOptionalString(request.resource.data, 'phone', 30) &&
+        isOptionalString(request.resource.data, 'email', 150) &&
+        isOptionalString(request.resource.data, 'hairGoal', 500) &&
+        isOptionalString(request.resource.data, 'mainComplaint', 1000) &&
+        isOptionalString(request.resource.data, 'notes', 3000) &&
+        isOptionalBool(request.resource.data, 'archived');
+
+      // Atualização de cliente:
+      // - Somente a profissional proprietária
+      // - Imutabilidade: professionalId, id e createdAt NÃO podem ser alterados
+      allow update: if isRecordOwner(resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'professionalId', 'name', 'phone', 'email', 'age',
+          'hairGoal', 'mainComplaint', 'notes', 'archived', 'archivedAt',
+          'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.professionalId == resource.data.professionalId &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        isNonEmptyString(request.resource.data.name, 150) &&
+        isOptionalString(request.resource.data, 'phone', 30) &&
+        isOptionalString(request.resource.data, 'email', 150) &&
+        isOptionalString(request.resource.data, 'hairGoal', 500) &&
+        isOptionalString(request.resource.data, 'mainComplaint', 1000) &&
+        isOptionalString(request.resource.data, 'notes', 3000) &&
+        isOptionalBool(request.resource.data, 'archived');
+
+      allow delete: if isRecordOwner(resource.data) || isAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: /evaluations (Avaliações Capilares)
+    // ==========================================
+    match /evaluations/{evaluationId} {
+      allow read: if isRecordOwner(resource.data) || isAdmin();
+
+      // Criação de avaliação:
+      // - professionalId deve corresponder ao usuário autenticado
+      // - id deve coincidir com evaluationId
+      // - clientId deve referenciar cliente pertencente à mesma profissional autenticada (Master-Gate)
+      // - Campos obrigatórios: id, professionalId, clientId, createdAt
+      // - Whitelist de campos permitidos correspondentes a FullEvaluationRecord
+      allow create: if isNewRecordOwner(request.resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'professionalId', 'clientId', 'clientName', 'date', 'createdAt',
+          'updatedAt', 'previousEvaluationId', 'evaluationMode', 'isDemoData',
+          'status', 'anamnese', 'visual', 'scores', 'calculation', 'salonProtocol',
+          'homeCare', 'treatmentSchedule', 'aiInsights', 'professionalNotes',
+          'evolutionNotes', 'nextEvaluationGoal', 'images'
+        ]) &&
+        request.resource.data.keys().hasAll(['id', 'professionalId', 'clientId', 'createdAt']) &&
+        request.resource.data.id == evaluationId &&
+        isNonEmptyString(request.resource.data.createdAt, 50) &&
+        clientBelongsToProfessional(request.resource.data.clientId, request.auth.uid) &&
+        isOptionalMap(request.resource.data, 'anamnese') &&
+        isOptionalMap(request.resource.data, 'visual') &&
+        isOptionalMap(request.resource.data, 'scores') &&
+        isOptionalMap(request.resource.data, 'calculation') &&
+        isOptionalMap(request.resource.data, 'salonProtocol') &&
+        isOptionalMap(request.resource.data, 'homeCare') &&
+        isOptionalMap(request.resource.data, 'treatmentSchedule') &&
+        isOptionalMap(request.resource.data, 'aiInsights') &&
+        isOptionalList(request.resource.data, 'images') &&
+        isOptionalString(request.resource.data, 'clientName', 150) &&
+        isOptionalString(request.resource.data, 'previousEvaluationId', 100) &&
+        isOptionalString(request.resource.data, 'evaluationMode', 50) &&
+        isOptionalBool(request.resource.data, 'isDemoData') &&
+        isOptionalString(request.resource.data, 'status', 50) &&
+        isOptionalString(request.resource.data, 'professionalNotes', 5000) &&
+        isOptionalString(request.resource.data, 'evolutionNotes', 5000) &&
+        isOptionalString(request.resource.data, 'nextEvaluationGoal', 500);
+
+      // Atualização de avaliação:
+      // - Somente a profissional proprietária
+      // - Imutabilidade: professionalId, clientId, id e createdAt NÃO podem ser alterados
+      allow update: if isRecordOwner(resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'professionalId', 'clientId', 'clientName', 'date', 'createdAt',
+          'updatedAt', 'previousEvaluationId', 'evaluationMode', 'isDemoData',
+          'status', 'anamnese', 'visual', 'scores', 'calculation', 'salonProtocol',
+          'homeCare', 'treatmentSchedule', 'aiInsights', 'professionalNotes',
+          'evolutionNotes', 'nextEvaluationGoal', 'images'
+        ]) &&
+        request.resource.data.professionalId == resource.data.professionalId &&
+        request.resource.data.clientId == resource.data.clientId &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        isOptionalMap(request.resource.data, 'anamnese') &&
+        isOptionalMap(request.resource.data, 'visual') &&
+        isOptionalMap(request.resource.data, 'scores') &&
+        isOptionalMap(request.resource.data, 'calculation') &&
+        isOptionalMap(request.resource.data, 'salonProtocol') &&
+        isOptionalMap(request.resource.data, 'homeCare') &&
+        isOptionalMap(request.resource.data, 'treatmentSchedule') &&
+        isOptionalMap(request.resource.data, 'aiInsights') &&
+        isOptionalList(request.resource.data, 'images') &&
+        isOptionalString(request.resource.data, 'clientName', 150) &&
+        isOptionalString(request.resource.data, 'previousEvaluationId', 100) &&
+        isOptionalString(request.resource.data, 'evaluationMode', 50) &&
+        isOptionalBool(request.resource.data, 'isDemoData') &&
+        isOptionalString(request.resource.data, 'status', 50) &&
+        isOptionalString(request.resource.data, 'professionalNotes', 5000) &&
+        isOptionalString(request.resource.data, 'evolutionNotes', 5000) &&
+        isOptionalString(request.resource.data, 'nextEvaluationGoal', 500);
+
+      allow delete: if isRecordOwner(resource.data) || isAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: /products (Bancada de produtos da profissional)
+    // ==========================================
+    match /products/{productId} {
+      allow read: if isRecordOwner(resource.data) || isAdmin();
+
+      // Criação de produto:
+      // - professionalId deve corresponder ao usuário autenticado
+      // - id deve coincidir com productId
+      // - Campos obrigatórios: id, professionalId, name, createdAt
+      // - Whitelist de campos permitidos correspondentes a SalonProduct
+      allow create: if isNewRecordOwner(request.resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'professionalId', 'name', 'brand', 'line', 'category',
+          'macroCategory', 'productType', 'purpose', 'targetUse', 'keyActives',
+          'keyIngredients', 'activeIngredients', 'cosmeticBenefits', 'indications',
+          'cautions', 'contraindications', 'usageInstructions', 'pauseTimeMinutes',
+          'suggestedFrequency', 'professionalNotes', 'active', 'inStock',
+          'stockQuantity', 'pH', 'description', 'price', 'indicatedCurvatures',
+          'tags', 'cosmeticFunction', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.keys().hasAll(['id', 'professionalId', 'name', 'createdAt']) &&
+        request.resource.data.id == productId &&
+        isNonEmptyString(request.resource.data.name, 200) &&
+        isNonEmptyString(request.resource.data.createdAt, 50) &&
+        isOptionalString(request.resource.data, 'brand', 100) &&
+        isOptionalString(request.resource.data, 'line', 100) &&
+        isOptionalString(request.resource.data, 'category', 50) &&
+        isOptionalString(request.resource.data, 'macroCategory', 50) &&
+        isOptionalString(request.resource.data, 'productType', 100) &&
+        isOptionalString(request.resource.data, 'purpose', 500) &&
+        isOptionalString(request.resource.data, 'targetUse', 50) &&
+        isOptionalString(request.resource.data, 'keyActives', 500) &&
+        isOptionalString(request.resource.data, 'indications', 1000) &&
+        isOptionalString(request.resource.data, 'cautions', 1000) &&
+        isOptionalString(request.resource.data, 'contraindications', 1000) &&
+        isOptionalString(request.resource.data, 'usageInstructions', 1000) &&
+        isOptionalNumber(request.resource.data, 'pauseTimeMinutes', 0, 180) &&
+        isOptionalString(request.resource.data, 'suggestedFrequency', 200) &&
+        isOptionalString(request.resource.data, 'professionalNotes', 3000) &&
+        isOptionalBool(request.resource.data, 'active') &&
+        isOptionalBool(request.resource.data, 'inStock') &&
+        isOptionalNumber(request.resource.data, 'stockQuantity', 0, 100000) &&
+        isOptionalString(request.resource.data, 'pH', 30) &&
+        isOptionalString(request.resource.data, 'description', 3000) &&
+        isOptionalString(request.resource.data, 'price', 50) &&
+        isOptionalList(request.resource.data, 'keyIngredients') &&
+        isOptionalList(request.resource.data, 'activeIngredients') &&
+        isOptionalList(request.resource.data, 'cosmeticBenefits') &&
+        isOptionalList(request.resource.data, 'indicatedCurvatures') &&
+        isOptionalList(request.resource.data, 'tags') &&
+        isOptionalString(request.resource.data, 'cosmeticFunction', 50);
+
+      // Atualização de produto:
+      // - Somente a profissional proprietária
+      // - Imutabilidade: professionalId, id e createdAt NÃO podem ser alterados
+      allow update: if isRecordOwner(resource.data) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'professionalId', 'name', 'brand', 'line', 'category',
+          'macroCategory', 'productType', 'purpose', 'targetUse', 'keyActives',
+          'keyIngredients', 'activeIngredients', 'cosmeticBenefits', 'indications',
+          'cautions', 'contraindications', 'usageInstructions', 'pauseTimeMinutes',
+          'suggestedFrequency', 'professionalNotes', 'active', 'inStock',
+          'stockQuantity', 'pH', 'description', 'price', 'indicatedCurvatures',
+          'tags', 'cosmeticFunction', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.professionalId == resource.data.professionalId &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        isNonEmptyString(request.resource.data.name, 200) &&
+        isOptionalString(request.resource.data, 'brand', 100) &&
+        isOptionalString(request.resource.data, 'line', 100) &&
+        isOptionalString(request.resource.data, 'category', 50) &&
+        isOptionalString(request.resource.data, 'macroCategory', 50) &&
+        isOptionalString(request.resource.data, 'productType', 100) &&
+        isOptionalString(request.resource.data, 'purpose', 500) &&
+        isOptionalString(request.resource.data, 'targetUse', 50) &&
+        isOptionalString(request.resource.data, 'keyActives', 500) &&
+        isOptionalString(request.resource.data, 'indications', 1000) &&
+        isOptionalString(request.resource.data, 'cautions', 1000) &&
+        isOptionalString(request.resource.data, 'contraindications', 1000) &&
+        isOptionalString(request.resource.data, 'usageInstructions', 1000) &&
+        isOptionalNumber(request.resource.data, 'pauseTimeMinutes', 0, 180) &&
+        isOptionalString(request.resource.data, 'suggestedFrequency', 200) &&
+        isOptionalString(request.resource.data, 'professionalNotes', 3000) &&
+        isOptionalBool(request.resource.data, 'active') &&
+        isOptionalBool(request.resource.data, 'inStock') &&
+        isOptionalNumber(request.resource.data, 'stockQuantity', 0, 100000) &&
+        isOptionalString(request.resource.data, 'pH', 30) &&
+        isOptionalString(request.resource.data, 'description', 3000) &&
+        isOptionalString(request.resource.data, 'price', 50) &&
+        isOptionalList(request.resource.data, 'keyIngredients') &&
+        isOptionalList(request.resource.data, 'activeIngredients') &&
+        isOptionalList(request.resource.data, 'cosmeticBenefits') &&
+        isOptionalList(request.resource.data, 'indicatedCurvatures') &&
+        isOptionalList(request.resource.data, 'tags') &&
+        isOptionalString(request.resource.data, 'cosmeticFunction', 50);
+
+      allow delete: if isRecordOwner(resource.data) || isAdmin();
+    }
+
+    // ==========================================
+    // POLÍTICA PADRÃO: NEGAÇÃO TOTAL (Zero Trust Catchall)
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

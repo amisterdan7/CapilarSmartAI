@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CAPILAR SMART IA - Firestore Blueprint",
+  "description": "Schema de coleções, tipagem, limites de tamanho e controle de acesso para isolamento seguro por profissional",
+  "collections": {
+    "admins": {
+      "description": "Lista autoritativa de administradores do sistema. Escrita bloqueada para qualquer SDK de cliente.",
+      "fields": {
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "provisionedBy": { "type": "string" }
+      }
+    },
+    "professionals": {
+      "description": "Perfis profissionais das usuárias autenticadas. ID do documento deve ser o UID do auth.",
+      "requiredOnCreate": ["uid", "email", "name", "createdAt"],
+      "immutableFields": ["uid", "email", "createdAt", "role"],
+      "allowedFields": ["uid", "email", "name", "clinicName", "phone", "role", "createdAt", "updatedAt"],
+      "fields": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "name": { "type": "string", "maxLength": 100 },
+        "clinicName": { "type": "string", "maxLength": 100, "optional": true },
+        "phone": { "type": "string", "maxLength": 30, "optional": true },
+        "role": { "type": "string", "enum": ["professional"] },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50, "optional": true }
+      }
+    },
+    "settings": {
+      "description": "Configurações individuais da profissional. O ID do documento é sempre o UID da profissional.",
+      "requiredOnCreate": ["professionalId"],
+      "immutableFields": ["professionalId"],
+      "allowedFields": [
+        "professionalId", "salonName", "professionalName", "phone",
+        "instagram", "enableSenacBadge", "defaultPauseTime", "customNotes", "updatedAt"
+      ],
+      "fields": {
+        "professionalId": { "type": "string" },
+        "salonName": { "type": "string", "maxLength": 100, "optional": true },
+        "professionalName": { "type": "string", "maxLength": 100, "optional": true },
+        "phone": { "type": "string", "maxLength": 30, "optional": true },
+        "instagram": { "type": "string", "maxLength": 50, "optional": true },
+        "enableSenacBadge": { "type": "boolean", "optional": true },
+        "defaultPauseTime": { "type": "number", "minimum": 0, "maximum": 180, "optional": true },
+        "customNotes": { "type": "string", "maxLength": 2000, "optional": true },
+        "updatedAt": { "type": "string", "maxLength": 50, "optional": true }
+      }
+    },
+    "clients": {
+      "description": "Registros de clientes cadastradas por profissional.",
+      "requiredOnCreate": ["id", "professionalId", "name", "createdAt"],
+      "immutableFields": ["id", "professionalId", "createdAt"],
+      "allowedFields": [
+        "id", "professionalId", "name", "phone", "email", "age",
+        "hairGoal", "mainComplaint", "notes", "archived", "archivedAt",
+        "createdAt", "updatedAt"
+      ],
+      "fields": {
+        "id": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 30, "optional": true },
+        "email": { "type": "string", "maxLength": 150, "optional": true },
+        "age": { "type": ["number", "string"], "optional": true },
+        "hairGoal": { "type": "string", "maxLength": 500, "optional": true },
+        "mainComplaint": { "type": "string", "maxLength": 1000, "optional": true },
+        "notes": { "type": "string", "maxLength": 3000, "optional": true },
+        "archived": { "type": "boolean", "optional": true },
+        "archivedAt": { "type": "string", "optional": true },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50, "optional": true }
+      }
+    },
+    "evaluations": {
+      "description": "Avaliações capilares e diagnósticos tricológicos.",
+      "requiredOnCreate": ["id", "professionalId", "clientId", "createdAt"],
+      "immutableFields": ["id", "professionalId", "clientId", "createdAt"],
+      "allowedFields": [
+        "id", "professionalId", "clientId", "clientName", "date", "createdAt",
+        "updatedAt", "previousEvaluationId", "evaluationMode", "isDemoData",
+        "status", "anamnese", "visual", "scores", "calculation", "salonProtocol",
+        "homeCare", "treatmentSchedule", "aiInsights", "professionalNotes",
+        "evolutionNotes", "nextEvaluationGoal", "images"
+      ],
+      "fields": {
+        "id": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string", "optional": true },
+        "date": { "type": "string", "optional": true },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50, "optional": true },
+        "previousEvaluationId": { "type": "string", "optional": true },
+        "evaluationMode": { "type": "string", "optional": true },
+        "isDemoData": { "type": "boolean", "optional": true },
+        "status": { "type": "string", "optional": true },
+        "anamnese": { "type": "object", "optional": true },
+        "visual": { "type": "object", "optional": true },
+        "scores": { "type": "object", "optional": true },
+        "calculation": { "type": "object", "optional": true },
+        "salonProtocol": { "type": "object", "optional": true },
+        "homeCare": { "type": "object", "optional": true },
+        "treatmentSchedule": { "type": "object", "optional": true },
+        "aiInsights": { "type": "object", "optional": true },
+        "professionalNotes": { "type": "string", "optional": true },
+        "evolutionNotes": { "type": "string", "optional": true },
+        "nextEvaluationGoal": { "type": "string", "optional": true },
+        "images": { "type": "array", "optional": true }
+      }
+    },
+    "products": {
+      "description": "Bancada e catálogo de cosmecêuticos e tratamentos da profissional.",
+      "requiredOnCreate": ["id", "professionalId", "name", "createdAt"],
+      "immutableFields": ["id", "professionalId", "createdAt"],
+      "allowedFields": [
+        "id", "professionalId", "name", "brand", "line", "category",
+        "macroCategory", "productType", "purpose", "targetUse", "keyActives",
+        "keyIngredients", "activeIngredients", "cosmeticBenefits", "indications",
+        "cautions", "contraindications", "usageInstructions", "pauseTimeMinutes",
+        "suggestedFrequency", "professionalNotes", "active", "inStock",
+        "stockQuantity", "pH", "description", "price", "indicatedCurvatures",
+        "tags", "cosmeticFunction", "createdAt", "updatedAt"
+      ],
+      "fields": {
+        "id": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 200 },
+        "brand": { "type": "string", "optional": true },
+        "category": { "type": "string", "optional": true },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50, "optional": true }
+      }
+    }
+  }
+}
